@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
+import 'language_selection_page.dart';
 
-void main() {
-  runApp(const MainApp());
-}
+void main() => runApp(DiabetesApp());
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
+class DiabetesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    return MaterialApp(
+      title: 'Diabetes App',
+      debugShowCheckedModeBanner: false,
+      home: LanguageSelectionPage(),
     );
   }
 }
