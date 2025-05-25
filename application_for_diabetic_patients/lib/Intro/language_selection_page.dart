@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import '../Authentication/login_page.dart';
 
 class LanguageSelectionPage extends StatelessWidget {
   @override

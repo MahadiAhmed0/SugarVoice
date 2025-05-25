@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'diabetes_type_selection_page.dart';
-import 'registration_page.dart'; // <-- import registration page
+import '../Intro/diabetes_type_selection_page.dart';
+import 'RegistrationPage.dart'; 
 
 class LoginPage extends StatelessWidget {
   final Color primaryColor = Color(0xFF4B0082);

@@ -1,4 +1,10 @@
+import 'CallFamilyPage.dart';
+import 'FoodAdvice.Dart';
+import 'MedicineLogPage.dart';
+import 'OfflineDiaryPage.dart';
+import 'SugarCheckPage.dart';
 import 'package:flutter/material.dart';
+import '../Utils/voice_utils.dart';
 
 class HomePage extends StatelessWidget {
   final List<String> buttons = [
@@ -42,7 +48,25 @@ class HomePage extends StatelessWidget {
                         ),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () {},
+                          onTap: () {
+                            switch (label) {
+                              case 'Check Sugar':
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => CheckSugarPage()));
+                                break;
+                              case 'Take/Log Medicine':
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => MedicineLogPage()));
+                                break;
+                              case 'Food Advice':
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => FoodAdvicePage()));
+                                break;
+                              case 'Call Family':
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => CallFamilyPage()));
+                                break;
+                              case 'Offline Diary':
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => OfflineDiaryPage()));
+                                break;
+                            }
+                          },
                           child: Center(
                               child: Text(
                             label,
@@ -63,7 +87,10 @@ class HomePage extends StatelessWidget {
             right: 0,
             child: Center(
               child: FloatingActionButton(
-                onPressed: () {},
+                onPressed: () {
+                  // Voice command functionality
+                  _showVoiceCommandDialog(context);
+                },
                 backgroundColor: borderColor,
                 child: Icon(Icons.mic),
               ),
@@ -73,4 +100,16 @@ class HomePage extends StatelessWidget {
       ),
     );
   }
+
+    void _showVoiceCommandDialog(BuildContext context) {
+      showVoiceInputDialog(
+        context: context,
+        borderColor: borderColor,
+        title: "Speak Now",
+        content: "What would you like to do?",
+        snackbarText: 'Listening for command...',
+    );
+  }
 }
+
+

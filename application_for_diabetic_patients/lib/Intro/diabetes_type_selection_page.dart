@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart';
+import '../Home/home_page.dart';
 
 class DiabetesTypeSelectionPage extends StatelessWidget {
   final List<String> types = [

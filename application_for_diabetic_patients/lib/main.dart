@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'language_selection_page.dart';
+import 'Intro/language_selection_page.dart';
 
 void main() => runApp(DiabetesApp());
 
