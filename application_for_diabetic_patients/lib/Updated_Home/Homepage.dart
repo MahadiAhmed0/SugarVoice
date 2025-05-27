@@ -3,96 +3,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
 import 'package:intl/intl.dart'; // Required for date formatting
 
-// Import the other tracking pages
+// Import the other tracking pages and their models
 import 'package:application_for_diabetic_patients/Updated_Home/glucose_input.dart';
 import 'package:application_for_diabetic_patients/Updated_Home/journal_entry.dart';
-import 'package:application_for_diabetic_patients/Updated_Home/meal_tracking.dart';
-import 'package:application_for_diabetic_patients/Updated_Home/mood_tracking.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/meal_tracking.dart'; // Contains MealEntry
+import 'package:application_for_diabetic_patients/Updated_Home/mood_tracking.dart'; // Contains MoodEntry
+import 'package:application_for_diabetic_patients/Updated_Home/medicine_tracker.dart'; // Contains MedicineLog and MedicineSchedule models
 
-
-// --- MoodEntry Model (Adapted for SharedPreferences and common structure) ---
-/// Represents a single mood entry.
-class MoodEntry {
-  final String id;
-  final String username;
-  final String mood;
-  final String timestamp; // Stored as ISO 8601 string for easy parsing
-
-  MoodEntry({
-    required this.id,
-    required this.username,
-    required this.mood,
-    required this.timestamp,
-  });
-
-  /// Factory constructor to create a [MoodEntry] from a JSON map.
-  factory MoodEntry.fromJson(Map<String, dynamic> json) {
-    return MoodEntry(
-      id: json['id'] as String,
-      username: json['username'] as String,
-      mood: json['mood'] as String,
-      timestamp: json['timestamp'] as String,
-    );
-  }
-
-  /// Converts a [MoodEntry] object to a JSON map.
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'username': username,
-      'mood': mood,
-      'timestamp': timestamp,
-    };
-  }
-
-  /// Returns a human-readable formatted timestamp.
-  String get formattedTimestamp {
-    final dateTime = DateTime.parse(timestamp);
-    return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
-  }
-}
-
-// --- MealEntry Model (Adapted for SharedPreferences and common structure) ---
-/// Represents a single meal entry.
-class MealEntry {
-  final String id;
-  final String mealDescription;
-  final String timestamp; // Stored as ISO 8601 string
-  final String username; // Added username for consistency with other models
-
-  MealEntry({
-    required this.id,
-    required this.mealDescription,
-    required this.timestamp,
-    required this.username,
-  });
-
-  /// Factory constructor to create a [MealEntry] from a JSON map.
-  factory MealEntry.fromJson(Map<String, dynamic> json) {
-    return MealEntry(
-      id: json['id'] as String,
-      mealDescription: json['mealDescription'] as String,
-      timestamp: json['timestamp'] as String,
-      username: json['username'] as String,
-    );
-  }
-
-  /// Converts a [MealEntry] object to a JSON map.
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'mealDescription': mealDescription,
-      'timestamp': timestamp,
-      'username': username,
-    };
-  }
-
-  /// Returns a human-readable formatted timestamp.
-  String get formattedTimestamp {
-    final dateTime = DateTime.parse(timestamp);
-    return DateFormat('yyyy-MM-dd HH:mm:ss').format(dateTime);
-  }
-}
+// Re-defining models here for clarity and to ensure consistency with homepage parsing.
+// Ideally, these would be in a separate `models.dart` file for reusability.
 
 // --- GlucoseEntry Model (from glucose_input.dart, adapted for common structure) ---
 /// Represents a single glucose reading entry.
@@ -135,8 +54,239 @@ class GlucoseEntry {
     return DateFormat('yyyy-MM-dd HH:mm:ss').format(dateTime);
   }
 }
-// --- End Models ---
 
+// --- JournalEntry Model (from journal_entry.dart, adapted for common structure) ---
+class JournalEntry {
+  final String id;
+  final String username;
+  final String title;
+  final String content;
+  final String timestamp; // Stored as ISO 8601 string for easy parsing
+
+  JournalEntry({
+    required this.id,
+    required this.username,
+    required this.title,
+    required this.content,
+    required this.timestamp,
+  });
+
+  factory JournalEntry.fromJson(Map<String, dynamic> json) {
+    return JournalEntry(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      title: json['title'] as String,
+      content: json['content'] as String,
+      timestamp: json['timestamp'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'title': title,
+      'content': content,
+      'timestamp': timestamp,
+    };
+  }
+
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+  }
+}
+
+// --- MealEntry Model (from meal_tracking.dart) ---
+class MealEntry {
+  final String id;
+  final String mealDescription;
+  final String timestamp;
+  final String username;
+
+  MealEntry({
+    required this.id,
+    required this.mealDescription,
+    required this.timestamp,
+    required this.username,
+  });
+
+  factory MealEntry.fromJson(Map<String, dynamic> json) {
+    return MealEntry(
+      id: json['id'] as String,
+      mealDescription: json['mealDescription'] as String,
+      timestamp: json['timestamp'] as String,
+      username: json['username'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'mealDescription': mealDescription,
+      'timestamp': timestamp,
+      'username': username,
+    };
+  }
+
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('MMM dd,EEEE - hh:mm a').format(dateTime);
+  }
+}
+
+// --- MoodEntry Model (from mood_tracking.dart) ---
+class MoodEntry {
+  final String id;
+  final String username;
+  final String mood;
+  final String timestamp;
+
+  MoodEntry({
+    required this.id,
+    required this.username,
+    required this.mood,
+    required this.timestamp,
+  });
+
+  factory MoodEntry.fromJson(Map<String, dynamic> json) {
+    return MoodEntry(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      mood: json['mood'] as String,
+      timestamp: json['timestamp'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'mood': mood,
+      'timestamp': timestamp,
+    };
+  }
+
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+  }
+}
+
+// --- MedicineLog Model (assuming it's defined in medicine_tracker.dart or a common models file) ---
+class MedicineLog {
+  final String id;
+  final String username;
+  final String medicineName;
+  final String dosage;
+  final String notes;
+  final String timestamp; // When the medicine was actually taken/logged
+
+  MedicineLog({
+    required this.id,
+    required this.username,
+    required this.medicineName,
+    required this.dosage,
+    this.notes = '',
+    required this.timestamp,
+  });
+
+  factory MedicineLog.fromJson(Map<String, dynamic> json) {
+    return MedicineLog(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      medicineName: json['medicineName'] as String,
+      dosage: json['dosage'] as String,
+      notes: json['notes'] as String,
+      timestamp: json['timestamp'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'medicineName': medicineName,
+      'dosage': dosage,
+      'notes': notes,
+      'timestamp': timestamp,
+    };
+  }
+
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy-MM-dd hh:mm a').format(dateTime);
+  }
+}
+
+// --- MedicineSchedule Model (assuming it's defined in medicine_tracker.dart or a common models file) ---
+class MedicineSchedule {
+  final String id;
+  final String username;
+  final String medicineName;
+  final String dosage;
+  final String frequency; // e.g., "Daily", "Weekly", "Specific Days"
+  final List<String> reminderTimes; // List of times in "HH:mm" format
+  final String startDate; // ISO 8601 date string
+  final String? endDate; // ISO 8601 date string, nullable for ongoing
+  final List<String> daysOfWeek; // e.g., ["Monday", "Wednesday"] for specific days
+  final bool isActive;
+
+  MedicineSchedule({
+    required this.id,
+    required this.username,
+    required this.medicineName,
+    required this.dosage,
+    required this.frequency,
+    required this.reminderTimes,
+    required this.startDate,
+    this.endDate,
+    this.daysOfWeek = const [],
+    this.isActive = true,
+  });
+
+  factory MedicineSchedule.fromJson(Map<String, dynamic> json) {
+    return MedicineSchedule(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      medicineName: json['medicineName'] as String,
+      dosage: json['dosage'] as String,
+      frequency: json['frequency'] as String,
+      reminderTimes: List<String>.from(json['reminderTimes'] as List),
+      startDate: json['startDate'] as String,
+      endDate: json['endDate'] as String?,
+      daysOfWeek: List<String>.from(json['daysOfWeek'] as List? ?? []),
+      isActive: json['isActive'] as bool,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'medicineName': medicineName,
+      'dosage': dosage,
+      'frequency': frequency,
+      'reminderTimes': reminderTimes,
+      'startDate': startDate,
+      'endDate': endDate,
+      'daysOfWeek': daysOfWeek,
+      'isActive': isActive,
+    };
+  }
+
+  String get formattedSchedule {
+    String times = reminderTimes.join(', ');
+    if (frequency == 'Daily') {
+      return '$frequency at $times';
+    } else if (frequency == 'Weekly' && daysOfWeek.isNotEmpty) {
+      return '$frequency on ${daysOfWeek.join(', ')} at $times';
+    }
+    return 'Schedule: $frequency at $times';
+  }
+}
+
+// --- End Models ---
 
 /// The main application widget for the Health Dashboard.
 class HomePageApp extends StatelessWidget {
@@ -155,7 +305,8 @@ class HomePageApp extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 4,
         ),
-        cardTheme: CardThemeData( // Using CardThemeData for theme definition
+        cardTheme: CardThemeData(
+          // Using CardThemeData for theme definition
           elevation: 3,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
@@ -178,35 +329,51 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // Hardcoded username as requested
   final String _username = "HealthUser";
-
   // Lists to store recent entries for each category
   List<MoodEntry> _recentMoodEntries = [];
   List<MealEntry> _recentMealEntries = [];
   List<GlucoseEntry> _recentGlucoseEntries = [];
+  List<MedicineLog> _recentMedicineLogs = [];
+  List<MedicineSchedule> _upcomingMedicineSchedules = [];
+
+  // Define a list of pages for the BottomNavigationBar
+  late final List<Widget> _pages;
+  int _selectedIndex = 0; // Current selected index for BottomNavigationBar
 
   @override
   void initState() {
     super.initState();
+    // Initialize the list of pages
+    // The first page is the dashboard view, the others are direct screens
+    _pages = [
+      _buildDashboardView(), // The main dashboard view
+      const GlucoseEntryScreen(),
+      const JournalEntryScreen(),
+      const MealTrackerHomePage(),
+      const MoodTrackerHomePage(),
+      const MedicineTrackerApp(), // Medicine Tracker app
+    ];
     _loadRecentRecords(); // Load records when the page initializes
   }
 
-  /// Loads recent records from SharedPreferences for Mood, Meal, and Glucose.
-  /// Filters entries to only include those from the last 3 days.
+  /// Loads recent records from SharedPreferences for Mood, Meal, Glucose, and Medicine.
+  /// Filters entries to only include those from the last 3 days for logs,
+  /// and relevant upcoming schedules for medicine.
   Future<void> _loadRecentRecords() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final threeDaysAgo = now.subtract(const Duration(days: 3));
 
     // --- Load Mood Entries ---
-    // The original mood_tracking.dart didn't use SharedPreferences.
-    // This assumes a 'moodEntries' key will be used for persistence.
     final String? moodEntriesJsonString = prefs.getString('moodEntries');
-    if (moodEntriesJsonString != null) {
+    if (moodEntriesJsonString != null && moodEntriesJsonString.isNotEmpty) {
       try {
         final List<dynamic> jsonList = jsonDecode(moodEntriesJsonString);
-        List<MoodEntry> allMoodEntries = jsonList.map((json) => MoodEntry.fromJson(json)).toList();
+        List<MoodEntry> allMoodEntries =
+            jsonList.map((json) => MoodEntry.fromJson(json)).toList();
         _recentMoodEntries = allMoodEntries
-            .where((entry) => DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .where((entry) =>
+                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
             .toList();
         _recentMoodEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
       } catch (e) {
@@ -216,12 +383,14 @@ class _HomePageState extends State<HomePage> {
 
     // --- Load Meal Entries ---
     final String? mealEntriesJsonString = prefs.getString('mealEntries');
-    if (mealEntriesJsonString != null) {
+    if (mealEntriesJsonString != null && mealEntriesJsonString.isNotEmpty) {
       try {
         final List<dynamic> jsonList = jsonDecode(mealEntriesJsonString);
-        List<MealEntry> allMealEntries = jsonList.map((json) => MealEntry.fromJson(json)).toList();
+        List<MealEntry> allMealEntries =
+            jsonList.map((json) => MealEntry.fromJson(json)).toList();
         _recentMealEntries = allMealEntries
-            .where((entry) => DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .where((entry) =>
+                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
             .toList();
         _recentMealEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
       } catch (e) {
@@ -231,21 +400,348 @@ class _HomePageState extends State<HomePage> {
 
     // --- Load Glucose Entries ---
     final String? glucoseEntriesJsonString = prefs.getString('glucoseEntries');
-    if (glucoseEntriesJsonString != null) {
+    if (glucoseEntriesJsonString != null &&
+        glucoseEntriesJsonString.isNotEmpty) {
       try {
         final List<dynamic> jsonList = jsonDecode(glucoseEntriesJsonString);
-        List<GlucoseEntry> allGlucoseEntries = jsonList.map((json) => GlucoseEntry.fromJson(json)).toList();
+        List<GlucoseEntry> allGlucoseEntries =
+            jsonList.map((json) => GlucoseEntry.fromJson(json)).toList();
         _recentGlucoseEntries = allGlucoseEntries
-            .where((entry) => DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .where((entry) =>
+                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
             .toList();
-        _recentGlucoseEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
+        _recentGlucoseEntries.sort(
+            (a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
       } catch (e) {
         print('Error decoding glucose entries: $e');
       }
     }
 
+    // --- Load Recent Medicine Logs ---
+    final String? medicineLogsJsonString = prefs.getString('medicineLogs');
+    if (medicineLogsJsonString != null && medicineLogsJsonString.isNotEmpty) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(medicineLogsJsonString);
+        List<MedicineLog> allMedicineLogs =
+            jsonList.map((json) => MedicineLog.fromJson(json)).toList();
+        _recentMedicineLogs = allMedicineLogs
+            .where((log) => DateTime.parse(log.timestamp).isAfter(threeDaysAgo))
+            .toList();
+        _recentMedicineLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      } catch (e) {
+        print('Error decoding medicine logs: $e');
+      }
+    }
+
+    // --- Load Upcoming Medicine Schedules ---
+    final String? medicineSchedulesJsonString =
+        prefs.getString('medicineSchedules');
+    if (medicineSchedulesJsonString != null &&
+        medicineSchedulesJsonString.isNotEmpty) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(medicineSchedulesJsonString);
+        List<MedicineSchedule> allSchedules =
+            jsonList.map((json) => MedicineSchedule.fromJson(json)).toList();
+
+        // Filter for active and upcoming schedules
+        List<MedicineSchedule> relevantSchedules = [];
+        final now = DateTime.now();
+        for (var schedule in allSchedules) {
+          if (!schedule.isActive) continue;
+
+          final startDate = DateTime.parse(schedule.startDate);
+          if (schedule.endDate != null) {
+            final endDate = DateTime.parse(schedule.endDate!);
+            if (now.isAfter(endDate)) continue; // Schedule has ended
+          }
+          if (now.isBefore(startDate.subtract(const Duration(days: 1)))) continue; // Schedule hasn't started yet (give some buffer)
+
+          // Check if today is one of the scheduled days for weekly frequency
+          if (schedule.frequency == 'Weekly' && schedule.daysOfWeek.isNotEmpty) {
+            final String todayDay = DateFormat('EEEE').format(now); // e.g., "Wednesday"
+            if (!schedule.daysOfWeek.contains(todayDay)) {
+              continue; // Not scheduled for today
+            }
+          }
+
+          // Check if there's an upcoming reminder time today or very soon
+          bool hasUpcomingReminder = false;
+          for (String timeStr in schedule.reminderTimes) {
+            final parts = timeStr.split(':');
+            if (parts.length != 2) continue; // Invalid time format
+            final int hour = int.parse(parts[0]);
+            final int minute = int.parse(parts[1]);
+
+            final DateTime reminderDateTime = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              hour,
+              minute,
+            );
+
+            // Consider reminders in the future or very recently passed (e.g., within last 15 mins)
+            if (reminderDateTime.isAfter(now.subtract(const Duration(minutes: 15)))) {
+              hasUpcomingReminder = true;
+              break;
+            }
+          }
+          if (hasUpcomingReminder) {
+            relevantSchedules.add(schedule);
+          }
+        }
+        _upcomingMedicineSchedules = relevantSchedules;
+        // Sort upcoming schedules (e.g., by medicine name or first reminder time)
+        _upcomingMedicineSchedules.sort((a, b) => a.medicineName.compareTo(b.medicineName));
+
+      } catch (e) {
+        print('Error decoding medicine schedules: $e');
+      }
+    }
+
     // Update the UI once all data is loaded and filtered
     setState(() {});
+  }
+
+  // Method to handle item tap in BottomNavigationBar
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  // This method builds the main dashboard view, which will be the first page.
+  Widget _buildDashboardView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Hello Username Section
+          Card(
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            color: Colors.deepPurple.shade100, // Light purple background for the greeting
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.waving_hand, size: 30, color: Colors.deepPurple),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Hello, $_username!',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Mood Entries Section
+          _buildSectionTitle('Recent Moods'),
+          _recentMoodEntries.isEmpty
+              ? _buildNoRecordsMessage('No mood entries in the last 3 days.')
+              : ListView.builder(
+                  shrinkWrap: true, // Makes ListView only take up needed space
+                  physics: const NeverScrollableScrollPhysics(), // Disables ListView's own scrolling
+                  itemCount: _recentMoodEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = _recentMoodEntries[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.blue.shade50, // Light blue for mood cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mood: ${entry.mood}',
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Recorded: ${entry.formattedTimestamp}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+
+          // Meal Entries Section
+          _buildSectionTitle('Recent Meals'),
+          _recentMealEntries.isEmpty
+              ? _buildNoRecordsMessage('No meal entries in the last 3 days.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentMealEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = _recentMealEntries[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.teal.shade50, // Light teal for meal cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Meal: ${entry.mealDescription}',
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Recorded: ${entry.formattedTimestamp}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+
+          // Glucose Entries Section
+          _buildSectionTitle('Recent Glucose Readings'),
+          _recentGlucoseEntries.isEmpty
+              ? _buildNoRecordsMessage('No glucose entries in the last 3 days.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentGlucoseEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = _recentGlucoseEntries[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.blue.shade50, // Light blue for glucose cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Glucose: ${entry.glucoseValue} mg/dL',
+                              style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade800),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Recorded: ${entry.formattedTimestamp}',
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.black54),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+
+          // --- Medicine Reminder Section ---
+          _buildSectionTitle('Upcoming Medicine Reminders'),
+          _upcomingMedicineSchedules.isEmpty
+              ? _buildNoRecordsMessage('No upcoming medicine reminders.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _upcomingMedicineSchedules.length,
+                  itemBuilder: (context, index) {
+                    final schedule = _upcomingMedicineSchedules[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.purple.shade50, // Light purple for medicine cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${schedule.medicineName} - ${schedule.dosage}',
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Schedule: ${schedule.formattedSchedule}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                            Text(
+                              'Times: ${schedule.reminderTimes.join(', ')}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+
+          // --- Recent Medicine Logs Section ---
+          _buildSectionTitle('Recent Medicine Logs'),
+          _recentMedicineLogs.isEmpty
+              ? _buildNoRecordsMessage('No recent medicine logs.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentMedicineLogs.length,
+                  itemBuilder: (context, index) {
+                    final log = _recentMedicineLogs[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.purple.shade50, // Light purple for medicine cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${log.medicineName} - ${log.dosage}',
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Taken: ${log.formattedTimestamp}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                            if (log.notes.isNotEmpty)
+                              Text(
+                                'Notes: ${log.notes}',
+                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
   }
 
   @override
@@ -260,194 +756,41 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      body: SingleChildScrollView( // Allows the entire content to scroll
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // Hello Username Section
-            Card(
-              elevation: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              color: Colors.deepPurple.shade100, // Light purple background for the greeting
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    const Icon(Icons.waving_hand, size: 30, color: Colors.deepPurple),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Hello, $_username!',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.deepPurple,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Mood Entries Section
-            _buildSectionTitle('Recent Moods'),
-            _recentMoodEntries.isEmpty
-                ? _buildNoRecordsMessage('No mood entries in the last 3 days.')
-                : ListView.builder(
-                    shrinkWrap: true, // Makes ListView only take up needed space
-                    physics: const NeverScrollableScrollPhysics(), // Disables ListView's own scrolling
-                    itemCount: _recentMoodEntries.length,
-                    itemBuilder: (context, index) {
-                      final entry = _recentMoodEntries[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                        color: Colors.blue.shade50, // Light blue for mood cards
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Mood: ${entry.mood}',
-                                style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Recorded: ${entry.formattedTimestamp}',
-                                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-            const SizedBox(height: 20),
-
-            // Meal Entries Section
-            _buildSectionTitle('Recent Meals'),
-            _recentMealEntries.isEmpty
-                ? _buildNoRecordsMessage('No meal entries in the last 3 days.')
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _recentMealEntries.length,
-                    itemBuilder: (context, index) {
-                      final entry = _recentMealEntries[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                        color: Colors.teal.shade50, // Light teal for meal cards
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Meal: ${entry.mealDescription}',
-                                style: const TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Recorded: ${entry.formattedTimestamp}',
-                                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-            const SizedBox(height: 20),
-
-            // Glucose Entries Section
-            _buildSectionTitle('Recent Glucose Readings'),
-            _recentGlucoseEntries.isEmpty
-                ? _buildNoRecordsMessage('No glucose entries in the last 3 days.')
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _recentGlucoseEntries.length,
-                    itemBuilder: (context, index) {
-                      final entry = _recentGlucoseEntries[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                        color: Colors.blue.shade50, // Light blue for glucose cards
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Glucose: ${entry.glucoseValue} mg/dL',
-                                style: TextStyle(
-                                    fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Recorded: ${entry.formattedTimestamp}',
-                                style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.black54),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.deepPurple,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.bloodtype, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const GlucoseEntryScreen()),
-                );
-              },
-              tooltip: 'Glucose Tracker',
-            ),
-            IconButton(
-              icon: const Icon(Icons.book, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const JournalEntryScreen()),
-                );
-              },
-              tooltip: 'Journal Entry',
-            ),
-            IconButton(
-              icon: const Icon(Icons.restaurant, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MealTrackerHomePage()),
-                );
-              },
-              tooltip: 'Meal Tracker',
-            ),
-            IconButton(
-              icon: const Icon(Icons.sentiment_satisfied_alt, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const MoodTrackerHomePage()),
-                );
-              },
-              tooltip: 'Mood Tracker',
-            ),
-          ],
-        ),
+      body: _pages[_selectedIndex], // Display the selected page
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // Ensure all items are visible
+        backgroundColor: Colors.deepPurple,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bloodtype),
+            label: 'Glucose',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: 'Journal',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.restaurant),
+            label: 'Meal',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.sentiment_satisfied_alt),
+            label: 'Mood',
+          ),
+          BottomNavigationBarItem(
+            // Added Medicine Tracker icon
+            icon: Icon(Icons.medical_services),
+            label: 'Medicine',
+          ),
+        ],
       ),
     );
   }

@@ -8,8 +8,7 @@ import 'Updated_Home/Homepage.dart';
 import 'Updated_Home/medicine_tracker.dart';
 
 
-void main() => runApp(const MedicineTrackerApp());
-
+void main() => runApp(const HomePageApp());
 class DiabetesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
