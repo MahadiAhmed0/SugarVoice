@@ -3,6 +3,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
 import 'package:intl/intl.dart'; // Required for date formatting
 
+// Import the other tracking pages
+import 'package:application_for_diabetic_patients/Updated_Home/glucose_input.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/journal_entry.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/meal_tracking.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/mood_tracking.dart';
+
+
 // --- MoodEntry Model (Adapted for SharedPreferences and common structure) ---
 /// Represents a single mood entry.
 class MoodEntry {
@@ -225,7 +232,7 @@ class _HomePageState extends State<HomePage> {
     // --- Load Glucose Entries ---
     final String? glucoseEntriesJsonString = prefs.getString('glucoseEntries');
     if (glucoseEntriesJsonString != null) {
-      try { // Added missing try block brace
+      try {
         final List<dynamic> jsonList = jsonDecode(glucoseEntriesJsonString);
         List<GlucoseEntry> allGlucoseEntries = jsonList.map((json) => GlucoseEntry.fromJson(json)).toList();
         _recentGlucoseEntries = allGlucoseEntries
@@ -239,7 +246,7 @@ class _HomePageState extends State<HomePage> {
 
     // Update the UI once all data is loaded and filtered
     setState(() {});
-  } // Added missing closing brace for _loadRecentRecords()
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -389,6 +396,56 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                   ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.deepPurple,
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.bloodtype, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const GlucoseEntryScreen()),
+                );
+              },
+              tooltip: 'Glucose Tracker',
+            ),
+            IconButton(
+              icon: const Icon(Icons.book, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const JournalEntryScreen()),
+                );
+              },
+              tooltip: 'Journal Entry',
+            ),
+            IconButton(
+              icon: const Icon(Icons.restaurant, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MealTrackerHomePage()),
+                );
+              },
+              tooltip: 'Meal Tracker',
+            ),
+            IconButton(
+              icon: const Icon(Icons.sentiment_satisfied_alt, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MoodTrackerHomePage()),
+                );
+              },
+              tooltip: 'Mood Tracker',
+            ),
           ],
         ),
       ),
