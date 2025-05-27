@@ -5,8 +5,10 @@ import 'Intro/language_selection_page.dart';
 import 'Updated_Home/journal_entry.dart';
 import 'Updated_Home/Homepage.dart';
 
+import 'Updated_Home/medicine_tracker.dart';
 
-void main() => runApp(const HomePageApp());
+
+void main() => runApp(const MedicineTrackerApp());
 
 class DiabetesApp extends StatelessWidget {
   @override
