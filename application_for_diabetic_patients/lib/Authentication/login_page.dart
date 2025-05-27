@@ -3,7 +3,11 @@ import '../Intro/diabetes_type_selection_page.dart';
 import 'RegistrationPage.dart'; 
 
 class LoginPage extends StatelessWidget {
-  final Color primaryColor = Color(0xFF4B0082);
+  // Make primaryColor a const field
+  final Color primaryColor = const Color(0xFF4B0082); 
+
+  // Add the const constructor with Key parameter
+  const LoginPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

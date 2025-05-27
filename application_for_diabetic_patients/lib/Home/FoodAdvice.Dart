@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'FoodSelection.dart';  
-import 'FoodSuggestionsPage.dart'; 
+import 'foodSuggestionsPage.dart'; 
 
 class FoodAdvicePage extends StatelessWidget {
   final Color borderColor = Color(0xFF4B0082);

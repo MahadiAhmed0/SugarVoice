@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "87303445420",
+    "project_id": "sugarvoice-21597",
+    "storage_bucket": "sugarvoice-21597.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:87303445420:android:3d78876de9c9b7efe7b809",
+        "android_client_info": {
+          "package_name": "com.example.application_for_diabetic_patients"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvPP453HrU6K1FE5pwFQ2my7hV_Lwi6Vk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
