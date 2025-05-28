@@ -13,9 +13,9 @@ Future<void> initTts() async {
   // Set default language to Bangla (Bangladesh)
   // You might want to dynamically set this based on user's language preference
   await flutterTts.setLanguage('bn-BD'); // Common code for Bangla (Bangladesh)
-  await flutterTts.setSpeechRate(0.8); // Adjust speed (e.g., 0.5 to 1.0)
+  await flutterTts.setSpeechRate(0.5); // Adjust speed (e.g., 0.5 to 1.0)
   await flutterTts.setVolume(1.0); // Set volume (0.0 to 1.0)
-  await flutterTts.setPitch(1.0); // Set pitch (0.5 to 2.0)
+  await flutterTts.setPitch(0.5); // Set pitch (0.5 to 2.0)
 
   // Optional: Set platform-specific audio categories for iOS
   // This helps ensure audio plays correctly even if other audio is playing
