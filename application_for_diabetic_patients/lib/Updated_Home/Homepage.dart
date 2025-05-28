@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:application_for_diabetic_patients/Utils/speech_service.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
@@ -8,7 +11,8 @@ import 'package:application_for_diabetic_patients/Updated_Home/glucose_input.dar
 import 'package:application_for_diabetic_patients/Updated_Home/journal_entry.dart';
 import 'package:application_for_diabetic_patients/Updated_Home/meal_tracking.dart'; // Contains MealEntry
 import 'package:application_for_diabetic_patients/Updated_Home/mood_tracking.dart'; // Contains MoodEntry
-import 'package:application_for_diabetic_patients/Updated_Home/medicine_tracker.dart'; // Contains MedicineLog and MedicineSchedule models
+import 'package:application_for_diabetic_patients/Updated_Home/medicine_tracker.dart';
+import 'package:speech_to_text/speech_recognition_result.dart'; // Contains MedicineLog and MedicineSchedule models
 
 // Re-defining models here for clarity and to ensure consistency with homepage parsing.
 // Ideally, these would be in a separate `models.dart` file for reusability.
@@ -327,8 +331,12 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  Timer? _speechClearTimer;
   // Hardcoded username as requested
   final String _username = "HealthUser";
+  final SpeechService _speechService = SpeechService();
+  String _wordsSpoken = "";
+  double _confidenceLevel = 0;
   // Lists to store recent entries for each category
   List<MoodEntry> _recentMoodEntries = [];
   List<MealEntry> _recentMealEntries = [];
@@ -343,18 +351,79 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Initialize the list of pages
-    // The first page is the dashboard view, the others are direct screens
     _pages = [
-      _buildDashboardView(), // The main dashboard view
+      _buildDashboardView(),
       const GlucoseEntryScreen(),
       const JournalEntryScreen(),
       const MealTrackerHomePage(),
       const MoodTrackerHomePage(),
-      const MedicineTrackerApp(), // Medicine Tracker app
+      const MedicineTrackerApp(),
     ];
-    _loadRecentRecords(); // Load records when the page initializes
+    _loadRecentRecords();
+    _initSpeech(); // Initialize speech service
   }
+
+  Future<void> _initSpeech() async {
+    await _speechService.initSpeech();
+    setState(() {});
+  }
+
+  void _startListening() async {
+    await _speechService.startListening(_onSpeechResult, localeId: 'en_US'); // Change locale as needed
+    setState(() {
+      _confidenceLevel = 0;
+    });
+  }
+
+  void _stopListening() async {
+  await _speechService.stopListening();
+  setState(() {});
+
+  // Set a timer to clear the speech text after a delay
+  _speechClearTimer?.cancel();
+  _speechClearTimer = Timer(const Duration(seconds: 2), () {
+    setState(() {
+      _wordsSpoken = "";
+      _confidenceLevel = 0;
+    });
+  });
+  Widget _buildNoRecordsMessage(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Center(
+        child: Text(
+          message,
+          style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _speechClearTimer?.cancel();
+    _speechService.stopListening();
+    super.dispose();
+  }
+}
+  void _onSpeechResult(SpeechRecognitionResult result) {
+  setState(() {
+    _wordsSpoken = "${result.recognizedWords}";
+    _confidenceLevel = _speechService.getConfidenceLevel(result);
+  });
+
+  // Reset the clear timer whenever we get new speech
+  _speechClearTimer?.cancel();
+  _speechClearTimer = Timer(const Duration(seconds: 2), () {
+    if (!_speechService.speechToText.isListening) {
+      setState(() {
+        _wordsSpoken = "";
+        _confidenceLevel = 0;
+      });
+    }
+  });
+}
 
   /// Loads recent records from SharedPreferences for Mood, Meal, Glucose, and Medicine.
   /// Filters entries to only include those from the last 3 days for logs,
@@ -756,7 +825,41 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      body: _pages[_selectedIndex], // Display the selected page
+      body: Stack(
+      children: [
+        _pages[_selectedIndex],
+        if (_wordsSpoken.isNotEmpty)
+          Positioned(
+            bottom: 100,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.all(16),
+              color: Colors.black.withOpacity(0.7),
+              child: Column(
+                children: [
+                  Text(
+                    _wordsSpoken,
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (_confidenceLevel > 0)
+                    Text(
+                      "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white70,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    ),// Display the selected page
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed, // Ensure all items are visible
         backgroundColor: Colors.deepPurple,
@@ -791,7 +894,16 @@ class _HomePageState extends State<HomePage> {
             label: 'Medicine',
           ),
         ],
+        
+      ),floatingActionButton: FloatingActionButton(
+      onPressed: _speechService.speechToText.isListening ? _stopListening : _startListening,
+      tooltip: 'Listen',
+      child: Icon(
+        _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
+        color: Colors.white,
       ),
+      backgroundColor: Colors.deepPurple, // Match your theme
+    ),
     );
   }
 
