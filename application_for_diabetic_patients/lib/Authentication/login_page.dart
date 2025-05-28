@@ -1,64 +1,120 @@
+import 'package:application_for_diabetic_patients/Updated_Home/homepage.dart';
+
+import 'auth_service.dart';
+
+import 'RegistrationPage.dart';
 import 'package:flutter/material.dart';
-import '../Intro/diabetes_type_selection_page.dart';
-import 'RegistrationPage.dart'; 
 
-class LoginPage extends StatelessWidget {
-  // Make primaryColor a const field
-  final Color primaryColor = const Color(0xFF4B0082); 
+class LoginPage extends StatefulWidget {
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
 
-  // Add the const constructor with Key parameter
-  const LoginPage({Key? key}) : super(key: key);
+class _LoginPageState extends State<LoginPage> {
+  AuthService _auth = AuthService();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passController = TextEditingController();
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    const primaryColor = Color(0xFF4E1B79);
+
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
-        child: SingleChildScrollView(
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Login',
+                "Login to Account",
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: primaryColor,
                 ),
               ),
-              SizedBox(height: 32),
-              _buildTextField(label: 'Email'),
-              SizedBox(height: 16),
-              _buildTextField(label: 'Password', obscureText: true),
-              SizedBox(height: 24),
+              SizedBox(height: 40),
+
+              // Email Field
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(
+                  labelText: "Email",
+                  labelStyle: TextStyle(color: primaryColor),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: primaryColor),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+
+              // Password Field
+              TextField(
+                controller: passController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Password",
+                  labelStyle: TextStyle(color: primaryColor),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: primaryColor),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              SizedBox(height: 30),
+
+              // Login Button
               ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => DiabetesTypeSelectionPage()),
-                  );
+                  _login();
+                  // Add login logic here
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
-                  minimumSize: Size(double.infinity, 48),
+                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Text('Login', style: TextStyle(fontSize: 16)),
+                child: Text(
+                  "Login",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
               ),
-              SizedBox(height: 16),
-              Center(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => RegistrationPage()),
-                    );
-                  },
-                  child: Text(
-                    "Don't have an account? Register now.",
-                    style: TextStyle(color: primaryColor),
+              SizedBox(height: 20),
+
+              // Navigate to Register Page
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => RegisterPage()),
+                  );
+                },
+                child: Text(
+                  "Don't have an account? Register",
+                  style: TextStyle(
+                    color: primaryColor,
+                    decoration: TextDecoration.underline,
+                    fontSize: 14,
                   ),
                 ),
               ),
@@ -68,20 +124,21 @@ class LoginPage extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildTextField({required String label, bool obscureText = false}) {
-    return TextField(
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: primaryColor),
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
+  _login() async{
+   final user = await _auth.signInUserWithEmailAndPassword(emailController.text, passController.text);
+    if(user != null){
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login Successful")),
+      );
+       Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePage()),
+      );
+    }
+    else{
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Something went wrong")),
+      );
+    }
   }
 }
