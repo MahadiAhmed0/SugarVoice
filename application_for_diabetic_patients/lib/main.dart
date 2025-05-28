@@ -9,6 +9,17 @@ import 'Updated_Home/Homepage.dart';
 import 'Updated_Home/medicine_tracker.dart';
 import 'Utils/voice_utils.dart'; // Import voice_utils
 
+/*
+
+TTS Data Installation: On some Android devices, the user might not have the required TTS voice data installed.
+Go to your device's Settings.
+Search for "Text-to-speech output" or "TTS settings" (exact path varies by manufacturer).
+Ensure a preferred engine (like Google Text-to-speech Engine) is selected.
+Check if voice data for Bangla (bn-BD) is installed. If not, download it.
+If you're testing on an emulator, ensure the emulator has Google Play Services and you're logged into a Google account, as the Google TTS engine often relies on this.
+
+*/
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter widgets are initialized
   await initTts(); // Initialize TTS before running the app
