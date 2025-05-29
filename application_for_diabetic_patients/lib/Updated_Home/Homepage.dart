@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
 import 'package:intl/intl.dart'; // Required for date formatting
+// Removed: import 'package:application_for_diabetic_patients/Utils/voice_utils.dart'; // No longer directly used here for mic button
 
 // Import the other tracking pages and their models
 import 'package:application_for_diabetic_patients/Updated_Home/glucose_input.dart';
@@ -12,7 +13,6 @@ import 'package:application_for_diabetic_patients/Updated_Home/medicine_tracker.
 
 // Re-defining models here for clarity and to ensure consistency with homepage parsing.
 // Ideally, these would be in a separate `models.dart` file for reusability.
-
 // --- GlucoseEntry Model (from glucose_input.dart, adapted for common structure) ---
 /// Represents a single glucose reading entry.
 class GlucoseEntry {
@@ -70,7 +70,6 @@ class JournalEntry {
     required this.content,
     required this.timestamp,
   });
-
   factory JournalEntry.fromJson(Map<String, dynamic> json) {
     return JournalEntry(
       id: json['id'] as String,
@@ -110,7 +109,6 @@ class MealEntry {
     required this.timestamp,
     required this.username,
   });
-
   factory MealEntry.fromJson(Map<String, dynamic> json) {
     return MealEntry(
       id: json['id'] as String,
@@ -131,7 +129,7 @@ class MealEntry {
 
   String get formattedTimestamp {
     final dateTime = DateTime.parse(timestamp);
-    return DateFormat('MMM dd,EEEE - hh:mm a').format(dateTime);
+    return DateFormat('MMM dd, EEEE - hh:mm a').format(dateTime);
   }
 }
 
@@ -148,7 +146,6 @@ class MoodEntry {
     required this.mood,
     required this.timestamp,
   });
-
   factory MoodEntry.fromJson(Map<String, dynamic> json) {
     return MoodEntry(
       id: json['id'] as String,
@@ -190,7 +187,6 @@ class MedicineLog {
     this.notes = '',
     required this.timestamp,
   });
-
   factory MedicineLog.fromJson(Map<String, dynamic> json) {
     return MedicineLog(
       id: json['id'] as String,
@@ -231,7 +227,6 @@ class MedicineSchedule {
   final String? endDate; // ISO 8601 date string, nullable for ongoing
   final List<String> daysOfWeek; // e.g., ["Monday", "Wednesday"] for specific days
   final bool isActive;
-
   MedicineSchedule({
     required this.id,
     required this.username,
@@ -244,7 +239,6 @@ class MedicineSchedule {
     this.daysOfWeek = const [],
     this.isActive = true,
   });
-
   factory MedicineSchedule.fromJson(Map<String, dynamic> json) {
     return MedicineSchedule(
       id: json['id'] as String,
@@ -321,7 +315,6 @@ class HomePageApp extends StatelessWidget {
 /// The HomePage screen displaying recent health records.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -336,23 +329,13 @@ class _HomePageState extends State<HomePage> {
   List<MedicineLog> _recentMedicineLogs = [];
   List<MedicineSchedule> _upcomingMedicineSchedules = [];
 
-  // Define a list of pages for the BottomNavigationBar
-  late final List<Widget> _pages;
-  int _selectedIndex = 0; // Current selected index for BottomNavigationBar
+  // This will store the index of the currently displayed page (only 0 for dashboard)
+  // For other tabs, we will navigate directly.
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    // Initialize the list of pages
-    // The first page is the dashboard view, the others are direct screens
-    _pages = [
-      _buildDashboardView(), // The main dashboard view
-      const GlucoseEntryScreen(),
-      const JournalEntryScreen(),
-      const MealTrackerHomePage(),
-      const MoodTrackerHomePage(),
-      const MedicineTrackerApp(), // Medicine Tracker app
-    ];
     _loadRecentRecords(); // Load records when the page initializes
   }
 
@@ -372,8 +355,7 @@ class _HomePageState extends State<HomePage> {
         List<MoodEntry> allMoodEntries =
             jsonList.map((json) => MoodEntry.fromJson(json)).toList();
         _recentMoodEntries = allMoodEntries
-            .where((entry) =>
-                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .where((entry) => DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
             .toList();
         _recentMoodEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
       } catch (e) {
@@ -389,8 +371,7 @@ class _HomePageState extends State<HomePage> {
         List<MealEntry> allMealEntries =
             jsonList.map((json) => MealEntry.fromJson(json)).toList();
         _recentMealEntries = allMealEntries
-            .where((entry) =>
-                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .where((entry) => DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
             .toList();
         _recentMealEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
       } catch (e) {
@@ -407,8 +388,7 @@ class _HomePageState extends State<HomePage> {
         List<GlucoseEntry> allGlucoseEntries =
             jsonList.map((json) => GlucoseEntry.fromJson(json)).toList();
         _recentGlucoseEntries = allGlucoseEntries
-            .where((entry) =>
-                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .where((entry) => DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
             .toList();
         _recentGlucoseEntries.sort(
             (a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
@@ -442,13 +422,11 @@ class _HomePageState extends State<HomePage> {
         final List<dynamic> jsonList = jsonDecode(medicineSchedulesJsonString);
         List<MedicineSchedule> allSchedules =
             jsonList.map((json) => MedicineSchedule.fromJson(json)).toList();
-
         // Filter for active and upcoming schedules
         List<MedicineSchedule> relevantSchedules = [];
         final now = DateTime.now();
         for (var schedule in allSchedules) {
           if (!schedule.isActive) continue;
-
           final startDate = DateTime.parse(schedule.startDate);
           if (schedule.endDate != null) {
             final endDate = DateTime.parse(schedule.endDate!);
@@ -479,7 +457,6 @@ class _HomePageState extends State<HomePage> {
               hour,
               minute,
             );
-
             // Consider reminders in the future or very recently passed (e.g., within last 15 mins)
             if (reminderDateTime.isAfter(now.subtract(const Duration(minutes: 15)))) {
               hasUpcomingReminder = true;
@@ -493,7 +470,6 @@ class _HomePageState extends State<HomePage> {
         _upcomingMedicineSchedules = relevantSchedules;
         // Sort upcoming schedules (e.g., by medicine name or first reminder time)
         _upcomingMedicineSchedules.sort((a, b) => a.medicineName.compareTo(b.medicineName));
-
       } catch (e) {
         print('Error decoding medicine schedules: $e');
       }
@@ -503,11 +479,90 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
-  // Method to handle item tap in BottomNavigationBar
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Your Health Dashboard'),
+        centerTitle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(20),
+          ),
+        ),
+      ),
+      body: _buildDashboardView(), // Directly show the dashboard view
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // Ensure all items are visible
+        backgroundColor: Colors.deepPurple,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index; // Update selected index
+          });
+
+          // Navigate to the respective page and then reload records when popped
+          if (index == 0) {
+            // Already on Dashboard, just ensure reload
+            _loadRecentRecords();
+          } else if (index == 1) { // Glucose
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const GlucoseEntryScreen()),
+            ).then((_) => _loadRecentRecords());
+          } else if (index == 2) { // Journal
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const JournalEntryScreen()),
+            ).then((_) => _loadRecentRecords());
+          } else if (index == 3) { // Meal
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MealTrackerHomePage()),
+            ).then((_) => _loadRecentRecords());
+          } else if (index == 4) { // Mood
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MoodTrackerHomePage()),
+            ).then((_) => _loadRecentRecords());
+          } else if (index == 5) { // Medicine
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MedicineTrackerApp()),
+            ).then((_) => _loadRecentRecords());
+          }
+        },
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bloodtype),
+            label: 'Glucose',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: 'Journal',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.restaurant),
+            label: 'Meal',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.sentiment_satisfied_alt),
+            label: 'Mood',
+          ),
+          BottomNavigationBarItem(
+            // Added Medicine Tracker icon
+            icon: Icon(Icons.medical_services),
+            label: 'Medicine',
+          ),
+        ],
+      ),
+    );
   }
 
   // This method builds the main dashboard view, which will be the first page.
@@ -715,12 +770,27 @@ class _HomePageState extends State<HomePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '${log.medicineName} - ${log.dosage}',
-                              style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.purple),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${log.medicineName} - ${log.dosage}',
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.purple),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () {
+                                    // You would implement the deletion logic here
+                                    // For example: _deleteMedicineLog(log.id);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Delete functionality not yet implemented here.')),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -739,57 +809,6 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
           const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your Health Dashboard'),
-        centerTitle: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(20),
-          ),
-        ),
-      ),
-      body: _pages[_selectedIndex], // Display the selected page
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Ensure all items are visible
-        backgroundColor: Colors.deepPurple,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bloodtype),
-            label: 'Glucose',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book),
-            label: 'Journal',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant),
-            label: 'Meal',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sentiment_satisfied_alt),
-            label: 'Mood',
-          ),
-          BottomNavigationBarItem(
-            // Added Medicine Tracker icon
-            icon: Icon(Icons.medical_services),
-            label: 'Medicine',
-          ),
         ],
       ),
     );

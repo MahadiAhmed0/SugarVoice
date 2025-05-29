@@ -7,7 +7,8 @@ import 'Updated_Home/journal_entry.dart';
 import 'Updated_Home/Homepage.dart';
 
 import 'Updated_Home/medicine_tracker.dart';
-import 'Utils/voice_utils.dart'; // Import voice_utils
+import 'Utils/voice_utils.dart';
+// Import voice_utils
 
 /*
 
@@ -15,37 +16,36 @@ TTS Data Installation: On some Android devices, the user might not have the requ
 Go to your device's Settings.
 Search for "Text-to-speech output" or "TTS settings" (exact path varies by manufacturer).
 Ensure a preferred engine (like Google Text-to-speech Engine) is selected.
-Check if voice data for Bangla (bn-BD) is installed. If not, download it.
+Check if voice data for Bangla (bn-BD) is installed.
+If not, download it.
 If you're testing on an emulator, ensure the emulator has Google Play Services and you're logged into a Google account, as the Google TTS engine often relies on this.
-
 */
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter widgets are initialized
-  await initTts(); // Initialize TTS before running the app
+  await initTts();
+// Initialize TTS before running the app
 
   // Determine the greeting based on the current time
   String greeting = '';
-  String languageCode = 'bn-BD'; // Default to Bangla
+  String languageCode = 'en-US'; // Already set to English [cite: 1]
 
   final hour = DateTime.now().hour;
   if (hour >= 5 && hour < 12) {
-    greeting = 'সুপ্রভাত, আপা! আপনি কি আপনার ওষুধ খেয়েছেন?'; // Good morning, Apa! Did you take your medicine?
+    greeting = 'Good morning! Have you taken your medicine today?'; // More natural phrasing
   } else if (hour >= 12 && hour < 17) {
-    greeting = 'শুভ বিকাল, আপা! আপনি কি আপনার ওষুধ খেয়েছেন?'; // Good afternoon, Apa! Did you take your medicine?
+    greeting = 'Good afternoon! Have you taken your medicine today?'; // More natural phrasing
   } else if (hour >= 17 && hour < 20) {
-    greeting = 'শুভ সন্ধ্যা, আপা! আপনি কি আপনার ওষুধ খেয়েছেন?'; // Good evening, Apa! Did you take your medicine?
+    greeting = 'Good evening! Have you taken your medicine today?'; // More natural phrasing
   } else {
-    greeting = 'শুভ রাত্রি, আপা! আপনি কি আপনার ওষুধ খেয়েছেন?'; // Good night, Apa! Did you take your medicine?
+    greeting = 'Good night! Remember to take your medicine.'; // More natural phrasing
   }
-
-  // You can also add English alternatives and select based on a stored preference
-  // For simplicity, we'll keep it Bangla for now as requested.
 
   // Speak the greeting
   await speakText(greeting, languageCode: languageCode);
 
-  runApp(const HomePageApp()); // Run your main app widget
+  runApp(const HomePageApp());
+// Run your main app widget
 }
 
 class DiabetesApp extends StatelessWidget {
