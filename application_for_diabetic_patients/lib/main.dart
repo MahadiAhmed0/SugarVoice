@@ -1,5 +1,7 @@
+import 'package:application_for_diabetic_patients/Constansts.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_gemini/flutter_gemini.dart';
 
 import 'Authentication/RegistrationPage.dart';
 import 'Intro/language_selection_page.dart';
@@ -8,6 +10,7 @@ import 'Updated_Home/Homepage.dart';
 import 'Updated_Home/medicine_tracker.dart';
 
 void main() async {
+  Gemini.init(apiKey: Gemini_API_KEY);
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Initialize Firebase
   runApp(HomePageApp());

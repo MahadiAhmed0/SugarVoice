@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:application_for_diabetic_patients/Constansts.dart';
+import 'package:application_for_diabetic_patients/Utils/gemini_service.dart';
 import 'package:application_for_diabetic_patients/Utils/speech_service.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -295,7 +297,7 @@ class MedicineSchedule {
 /// The main application widget for the Health Dashboard.
 class HomePageApp extends StatelessWidget {
   const HomePageApp({super.key});
-
+  
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -331,6 +333,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  GeminiService _geminiService = GeminiService(apiKey: Gemini_API_KEY);
+  String _geminiResponse = "";
   Timer? _speechClearTimer;
   // Hardcoded username as requested
   final String _username = "HealthUser";
@@ -408,21 +412,231 @@ class _HomePageState extends State<HomePage> {
   }
 }
   void _onSpeechResult(SpeechRecognitionResult result) {
+  final recognizedWords = result.recognizedWords.toLowerCase();
   setState(() {
-    _wordsSpoken = "${result.recognizedWords}";
+    _wordsSpoken = recognizedWords;
     _confidenceLevel = _speechService.getConfidenceLevel(result);
   });
 
-  // Reset the clear timer whenever we get new speech
+  // Check for wake word "medico" or similar
+  if (recognizedWords.contains('medico') || 
+      recognizedWords.contains('medical') || 
+      recognizedWords.contains('mediko')) {
+    _handleGeminiQuery(recognizedWords);
+    return;
+  }
+
+  // Only process commands if the speech has sufficient confidence
+  if (_confidenceLevel > 0.7) {
+    // Existing command handling
+    if (recognizedWords.contains('glucose') || recognizedWords.contains('sugar')) {
+      _handleGlucoseCommand(recognizedWords);
+    }
+    else if (recognizedWords.contains('mood') || recognizedWords.contains('feeling')) {
+      _handleMoodCommand(recognizedWords);
+    }
+    else if (recognizedWords.contains('meal') || recognizedWords.contains('food') || recognizedWords.contains('ate')) {
+      _handleMealCommand(recognizedWords);
+    }
+  }
+
+  // Reset the clear timer
   _speechClearTimer?.cancel();
   _speechClearTimer = Timer(const Duration(seconds: 2), () {
     if (!_speechService.speechToText.isListening) {
       setState(() {
         _wordsSpoken = "";
         _confidenceLevel = 0;
+        _geminiResponse = "";
       });
     }
   });
+}
+void _handleGeminiQuery(String recognizedWords) async {
+  // Extract the query after the wake word
+  String query = recognizedWords;
+  if (recognizedWords.contains('medico')) {
+    query = recognizedWords.split('medico').last.trim();
+  } 
+  else if (recognizedWords.contains('medical')) {
+    query = recognizedWords.split('medical').last.trim();
+  }
+  else if (recognizedWords.contains('mediko')) {
+    query = recognizedWords.split('mediko').last.trim();
+  }
+
+  if (query.isEmpty) {
+    setState(() {
+      _geminiResponse = "I'm listening for your health question...";
+    });
+    return;
+  }
+
+  // Get response from Gemini
+  final response = await _geminiService.getSingleHealthResponse(query);
+  
+  setState(() {
+    _geminiResponse = response;
+  });
+}
+
+void _handleGlucoseCommand(String recognizedWords) {
+  // Extract the glucose value from the recognized words
+  String glucoseValue = recognizedWords.replaceAll(RegExp(r'[^0-9]'), '');
+
+  if (glucoseValue.isEmpty) {
+    setState(() {
+      _geminiResponse = "I didn't hear a valid glucose value. Please say something like 'glucose 120'";
+    });
+    return;
+  }
+
+  // Create a new glucose entry directly
+  final newEntry = GlucoseEntry(
+    username: _username,
+    glucoseValue: glucoseValue,
+    timestamp: DateTime.now().toIso8601String(),
+  );
+
+  // Save to shared preferences
+  _saveGlucoseEntry(newEntry);
+  
+  setState(() {
+    _geminiResponse = "Recorded glucose: $glucoseValue mg/dL";
+    // Update recent glucose entries for display
+    _recentGlucoseEntries.insert(0, newEntry);
+    if (_recentGlucoseEntries.length > 5) {
+      _recentGlucoseEntries = _recentGlucoseEntries.sublist(0, 5);
+    }
+  });
+}
+
+Future<void> _saveGlucoseEntry(GlucoseEntry entry) async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? entriesJsonString = prefs.getString('glucoseEntries');
+  List<dynamic> jsonList = [];
+  
+  if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+    jsonList = jsonDecode(entriesJsonString);
+  }
+  
+  jsonList.add(entry.toJson());
+  await prefs.setString('glucoseEntries', jsonEncode(jsonList));
+}
+
+void _handleMoodCommand(String recognizedWords) {
+  // Map of mood keywords to mood categories
+  final moodMap = {
+    'happy': 'Happy',
+    'sad': 'Sad',
+    'neutral': 'Neutral',
+    'excited': 'Excited',
+    'anxious': 'Anxious',
+    'stressed': 'Stressed',
+    'calm': 'Calm',
+    'angry': 'Angry',
+    'tired': 'Tired',
+    'energetic': 'Energetic'
+  };
+
+  // Find which mood was mentioned
+  String? detectedMood;
+  for (final entry in moodMap.entries) {
+    if (recognizedWords.contains(entry.key)) {
+      detectedMood = entry.value;
+      break;
+    }
+  }
+
+  if (detectedMood != null) {
+    // Create a new mood entry directly
+    final newEntry = MoodEntry(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      username: _username,
+      mood: detectedMood,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+
+    // Save to shared preferences
+    _saveMoodEntry(newEntry);
+    
+    setState(() {
+      _geminiResponse = "Recorded mood: $detectedMood";
+      // Update recent mood entries for display
+      _recentMoodEntries.insert(0, newEntry);
+      if (_recentMoodEntries.length > 5) {
+        _recentMoodEntries = _recentMoodEntries.sublist(0, 5);
+      }
+    });
+  } else {
+    setState(() {
+      _geminiResponse = "I didn't recognize the mood. Please say something like 'I feel happy'";
+    });
+  }
+}
+
+Future<void> _saveMoodEntry(MoodEntry entry) async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? entriesJsonString = prefs.getString('moodEntries');
+  List<dynamic> jsonList = [];
+  
+  if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+    jsonList = jsonDecode(entriesJsonString);
+  }
+  
+  jsonList.add(entry.toJson());
+  await prefs.setString('moodEntries', jsonEncode(jsonList));
+}
+
+void _handleMealCommand(String recognizedWords) {
+  // Extract the meal description (everything after "meal" or "food")
+  String mealDescription = recognizedWords;
+  if (recognizedWords.contains('meal')) {
+    mealDescription = recognizedWords.split('meal').last.trim();
+  } else if (recognizedWords.contains('food')) {
+    mealDescription = recognizedWords.split('food').last.trim();
+  } else if (recognizedWords.contains('ate')) {
+    mealDescription = recognizedWords.split('ate').last.trim();
+  }
+
+  if (mealDescription.isNotEmpty) {
+    // Create a new meal entry
+    final newEntry = MealEntry(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      username: _username,
+      mealDescription: mealDescription,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+
+    // Save to shared preferences
+    _saveMealEntry(newEntry);
+    
+    setState(() {
+      _geminiResponse = "Recorded meal: $mealDescription";
+      // Update recent meal entries for display
+      _recentMealEntries.insert(0, newEntry);
+      if (_recentMealEntries.length > 5) {
+        _recentMealEntries = _recentMealEntries.sublist(0, 5);
+      }
+    });
+  } else {
+    setState(() {
+      _geminiResponse = "I didn't hear what you ate. Please say something like 'I ate pasta'";
+    });
+  }
+}
+
+Future<void> _saveMealEntry(MealEntry entry) async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? entriesJsonString = prefs.getString('mealEntries');
+  List<dynamic> jsonList = [];
+  
+  if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+    jsonList = jsonDecode(entriesJsonString);
+  }
+  
+  jsonList.add(entry.toJson());
+  await prefs.setString('mealEntries', jsonEncode(jsonList));
 }
 
   /// Loads recent records from SharedPreferences for Mood, Meal, Glucose, and Medicine.
@@ -825,41 +1039,190 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      body: Stack(
-      children: [
-        _pages[_selectedIndex],
-        if (_wordsSpoken.isNotEmpty)
-          Positioned(
-            bottom: 100,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: EdgeInsets.all(16),
-              color: Colors.black.withOpacity(0.7),
-              child: Column(
-                children: [
-                  Text(
-                    _wordsSpoken,
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
+    //   body: Stack(
+    //   children: [
+    //     _pages[_selectedIndex],
+    //     if (_wordsSpoken.isNotEmpty)
+    //       Positioned(
+    //         bottom: 100,
+    //         left: 0,
+    //         right: 0,
+    //         child: Container(
+    //           padding: EdgeInsets.all(16),
+    //           color: Colors.black.withOpacity(0.7),
+    //           child: Column(
+    //             children: [
+    //               Text(
+    //                 _wordsSpoken,
+    //                 style: TextStyle(
+    //                   fontSize: 20,
+    //                   color: Colors.white,
+    //                 ),
+    //                 textAlign: TextAlign.center,
+    //               ),
+    //               if (_confidenceLevel > 0)
+    //                 Text(
+    //                   "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
+    //                   style: TextStyle(
+    //                     fontSize: 16,
+    //                     color: Colors.white70,
+    //                   ),
+    //                 ),
+    //             ],
+    //           ),
+    //         ),
+    //       ),
+    //   ],
+    // ),// Display the selected page
+
+
+
+
+
+//       body : Stack(
+//   children: [
+//     _pages[_selectedIndex],
+//     if (_wordsSpoken.isNotEmpty)
+//       Positioned(
+//         bottom: 100,
+//         left: 0,
+//         right: 0,
+//         child: Container(
+//           padding: EdgeInsets.all(16),
+//           color: Colors.black.withOpacity(0.7),
+//           child: Column(
+//             children: [
+//               Text(
+//                 _wordsSpoken,
+//                 style: TextStyle(
+//                   fontSize: 20,
+//                   color: Colors.white,
+//                 ),
+//                 textAlign: TextAlign.center,
+//               ),
+//               if (_confidenceLevel > 0)
+//                 Text(
+//                   "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
+//                   style: TextStyle(
+//                     fontSize: 16,
+//                     color: Colors.white70,
+//                   ),
+//                 ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     if (_geminiResponse.isNotEmpty)
+//       Positioned(
+//         bottom: 180, // Above the speech result
+//         left: 0,
+//         right: 0,
+//         child: Container(
+//           padding: EdgeInsets.all(16),
+//           color: Colors.green.withOpacity(0.7),
+//           child: Text(
+//             _geminiResponse,
+//             style: TextStyle(
+//               fontSize: 18,
+//               color: Colors.white,
+//             ),
+//             textAlign: TextAlign.center,
+//           ),
+//         ),
+//       ),
+//   ],
+// ),
+
+
+
+  body : Stack(
+  children: [
+    _pages[_selectedIndex],
+    if (_wordsSpoken.isNotEmpty)
+      Positioned(
+        bottom: 100,
+        left: 0,
+        right: 0,
+        child: Container(
+          padding: EdgeInsets.all(16),
+          color: Colors.black.withOpacity(0.7),
+          child: Column(
+            children: [
+              Text(
+                _wordsSpoken,
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (_confidenceLevel > 0)
+                Text(
+                  "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
                   ),
-                  if (_confidenceLevel > 0)
-                    Text(
-                      "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
-                      ),
-                    ),
-                ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    if (_geminiResponse.isNotEmpty)
+      Positioned(
+        bottom: 180,
+        left: 0,
+        right: 0,
+        child: Container(
+          padding: EdgeInsets.all(16),
+          color: Colors.green.withOpacity(0.7),
+          child: Column(
+            children: [
+              Text(
+                "Medico Response:",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                _geminiResponse,
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    if (_wordsSpoken.toLowerCase().contains('medico') && 
+      _wordsSpoken.toLowerCase().split('medico').last.trim().isNotEmpty)
+      Positioned(
+        top: 100,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              "Listening for health query...",
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.white,
               ),
             ),
           ),
-      ],
-    ),// Display the selected page
+        ),
+      ),
+  ],
+),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed, // Ensure all items are visible
         backgroundColor: Colors.deepPurple,
@@ -895,15 +1258,27 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
         
-      ),floatingActionButton: FloatingActionButton(
-      onPressed: _speechService.speechToText.isListening ? _stopListening : _startListening,
-      tooltip: 'Listen',
-      child: Icon(
-        _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
-        color: Colors.white,
       ),
-      backgroundColor: Colors.deepPurple, // Match your theme
-    ),
+    //   floatingActionButton: FloatingActionButton(
+    //   onPressed: _speechService.speechToText.isListening ? _stopListening : _startListening,
+    //   tooltip: 'Listen',
+    //   child: Icon(
+    //     _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
+    //     color: Colors.white,
+    //   ),
+    //   backgroundColor: Colors.deepPurple, // Match your theme
+    // ),
+    floatingActionButton: FloatingActionButton(
+  onPressed: _speechService.speechToText.isListening ? _stopListening : _startListening,
+  tooltip: 'Listen',
+  child: Icon(
+    _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
+    color: Colors.white,
+  ),
+  backgroundColor: _wordsSpoken.toLowerCase().contains('medico') 
+      ? Colors.green 
+      : Colors.deepPurple,
+),
     );
   }
 
