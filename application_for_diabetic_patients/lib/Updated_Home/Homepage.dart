@@ -418,17 +418,29 @@ class _HomePageState extends State<HomePage> {
     _confidenceLevel = _speechService.getConfidenceLevel(result);
   });
 
-  // Check for wake word "medico" or similar
-  if (recognizedWords.contains('medico') || 
+  // Check for wake word if we're not already in Medico mode
+  if (!_isListeningForMedico && 
+      (recognizedWords.contains('medico') || 
       recognizedWords.contains('medical') || 
-      recognizedWords.contains('mediko')) {
-    _handleGeminiQuery(recognizedWords);
+      recognizedWords.contains('mediko'))) {
+    setState(() {
+      _isListeningForMedico = true;
+      _geminiResponse = "I'm listening for your health question...";
+    });
     return;
   }
 
-  // Only process commands if the speech has sufficient confidence
-  if (_confidenceLevel > 0.7) {
-    // Existing command handling
+  // If we're in Medico mode, process the query when speech stops
+  if (_isListeningForMedico && !_speechService.speechToText.isListening) {
+    _handleGeminiQuery(recognizedWords);
+    setState(() {
+      _isListeningForMedico = false;
+    });
+    return;
+  }
+
+  // Only process commands if the speech has sufficient confidence and we're not in Medico mode
+  if (_confidenceLevel > 0.7 && !_isListeningForMedico) {
     if (recognizedWords.contains('glucose') || recognizedWords.contains('sugar')) {
       _handleGlucoseCommand(recognizedWords);
     }
@@ -447,11 +459,14 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _wordsSpoken = "";
         _confidenceLevel = 0;
-        _geminiResponse = "";
+        if (!_isListeningForMedico) {
+          _geminiResponse = "";
+        }
       });
     }
   });
 }
+bool _isListeningForMedico = false;
 void _handleGeminiQuery(String recognizedWords) async {
   // Extract the query after the wake word
   String query = recognizedWords;
@@ -1221,7 +1236,30 @@ Future<void> _saveMealEntry(MealEntry entry) async {
           ),
         ),
       ),
+      if (_isListeningForMedico)
+  Positioned(
+    top: 100,
+    left: 0,
+    right: 0,
+    child: Center(
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.deepPurple.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          "Listening for health query...",
+          style: TextStyle(
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    ),
+  ),
   ],
+  
 ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed, // Ensure all items are visible
@@ -1275,9 +1313,11 @@ Future<void> _saveMealEntry(MealEntry entry) async {
     _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
     color: Colors.white,
   ),
-  backgroundColor: _wordsSpoken.toLowerCase().contains('medico') 
+  backgroundColor: _isListeningForMedico 
       ? Colors.green 
-      : Colors.deepPurple,
+      : (_speechService.speechToText.isListening 
+          ? Colors.deepPurple 
+          : Colors.deepPurple),
 ),
     );
   }
