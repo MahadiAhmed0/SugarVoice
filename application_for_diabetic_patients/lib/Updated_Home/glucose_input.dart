@@ -4,6 +4,12 @@ import 'package:intl/intl.dart'; // Required for date formatting
 import 'package:shared_preferences/shared_preferences.dart'; // Required for local storage
 import 'dart:convert'; // Required for JSON encoding/decoding
 
+// Import gamification managers
+import 'package:application_for_diabetic_patients/Updated_Home/achievement_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/mission_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/streak_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/xp_tracker.dart';
+
 // --- GlucoseEntry Model ---
 class GlucoseEntry {
   final String username;
@@ -49,7 +55,6 @@ class GlucoseEntry {
 
 class GlucoseTrackerApp extends StatelessWidget {
   const GlucoseTrackerApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -113,22 +118,44 @@ class _GlucoseEntryScreenState extends State<GlucoseEntryScreen> {
   }
 
   // Create: Save a new glucose entry to local storage
-  void _saveGlucoseEntry() {
+  void _saveGlucoseEntry() async {
     if (_formKey.currentState!.validate()) {
       final newEntry = GlucoseEntry(
         username: _savedUsername,
         glucoseValue: _glucoseController.text,
         timestamp: DateTime.now().toIso8601String(), // Store as ISO 8601 string
       );
-
       setState(() {
         _glucoseEntries.add(newEntry); // Add new entry to the list
         _glucoseEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest first
       });
-
-      _persistGlucoseEntries(); // Persist the updated list
+      await _persistGlucoseEntries(); // Persist the updated list
       _glucoseController.clear(); // Clear the input field after saving
       _showMessage('Entry saved for $_savedUsername: ${newEntry.glucoseValue} mg/dL');
+
+      // Gamification updates
+      await XPTracker.addXP(10); // Award XP for logging glucose
+      await StreakManager.logActivity('glucose'); // Log glucose activity for streak
+
+      // Check for mission completion - this logic should ideally be centralized or passed in
+      final prefs = await SharedPreferences.getInstance();
+      List<GlucoseEntry> allGlucoseEntries = [];
+      final String? entriesJsonString = prefs.getString('glucoseEntries');
+      if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+        final List<dynamic> jsonList = jsonDecode(entriesJsonString);
+        allGlucoseEntries = jsonList.map((json) => GlucoseEntry.fromJson(json)).toList();
+      }
+      final today = DateTime.now();
+      final todayFormatted = DateFormat('yyyy-MM-dd').format(today);
+      final glucoseLogsToday = allGlucoseEntries.where((entry) => DateFormat('yyyy-MM-dd').format(DateTime.parse(entry.timestamp)) == todayFormatted).length;
+
+      final missions = await MissionManager.getMissions();
+      for (int i = 0; i < missions.length; i++) {
+        if (missions[i].contains('Log glucose') && glucoseLogsToday >= int.parse(missions[i].replaceAll(RegExp(r'[^0-9]'), ''))) {
+          await MissionManager.complete(i);
+          await AchievementManager.unlock('Glucose Logger'); // Example achievement
+        }
+      }
     }
   }
 
