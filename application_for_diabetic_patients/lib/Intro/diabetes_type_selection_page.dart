@@ -1,5 +1,6 @@
+import 'package:application_for_diabetic_patients/Updated_Home/Homepage.dart';
 import 'package:flutter/material.dart';
-import '../Home/home_page.dart';
+
 
 class DiabetesTypeSelectionPage extends StatelessWidget {
   final List<String> types = [
@@ -9,8 +10,6 @@ class DiabetesTypeSelectionPage extends StatelessWidget {
     'Prediabetic',
     'Not Sure'
   ];
-
-  const DiabetesTypeSelectionPage({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -1,68 +1,1046 @@
+import 'dart:async';
+
+import 'package:application_for_diabetic_patients/Constansts.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/EmergencyPage.dart';
+import 'package:application_for_diabetic_patients/Utils/gemini_service.dart';
+import 'package:application_for_diabetic_patients/Utils/speech_service.dart';
 import 'package:flutter/material.dart';
-import 'package:application_for_diabetic_patients/Updated_Home/xp_tracker.dart';
-import 'package:application_for_diabetic_patients/Updated_Home/streak_manager.dart';
-import 'package:application_for_diabetic_patients/Updated_Home/achievement_manager.dart';
-import 'package:application_for_diabetic_patients/Updated_Home/mission_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert'; // Required for JSON encoding/decoding
+import 'package:intl/intl.dart'; // Required for date formatting
 
-class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+// Import the other tracking pages and their models
+import 'package:application_for_diabetic_patients/Updated_Home/glucose_input.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/journal_entry.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/meal_tracking.dart'; // Contains MealEntry
+import 'package:application_for_diabetic_patients/Updated_Home/mood_tracking.dart'; // Contains MoodEntry
+import 'package:application_for_diabetic_patients/Updated_Home/medicine_tracker.dart';
+import 'package:speech_to_text/speech_recognition_result.dart'; // Contains MedicineLog and MedicineSchedule models
 
-  @override
-  _DashboardPageState createState() => _DashboardPageState();
+// Re-defining models here for clarity and to ensure consistency with homepage parsing.
+// Ideally, these would be in a separate `models.dart` file for reusability.
+
+// --- GlucoseEntry Model (from glucose_input.dart, adapted for common structure) ---
+/// Represents a single glucose reading entry.
+class GlucoseEntry {
+  final String username;
+  final String glucoseValue;
+  final String timestamp;
+  final String id; // Unique ID for each entry, useful for deletion
+
+  GlucoseEntry({
+    required this.username,
+    required this.glucoseValue,
+    required this.timestamp,
+    String? id, // Make id nullable for initial creation
+  }) : id = id ?? DateTime.now().toIso8601String(); // Generate ID if not provided
+
+  /// Factory constructor to create a [GlucoseEntry] from a JSON map.
+  factory GlucoseEntry.fromJson(Map<String, dynamic> json) {
+    return GlucoseEntry(
+      username: json['username'] as String,
+      glucoseValue: json['glucoseValue'] as String,
+      timestamp: json['timestamp'] as String,
+      id: json['id'] as String,
+    );
+  }
+
+  /// Converts a [GlucoseEntry] object to a JSON map.
+  Map<String, dynamic> toJson() {
+    return {
+      'username': username,
+      'glucoseValue': glucoseValue,
+      'timestamp': timestamp,
+      'id': id,
+    };
+  }
+
+  /// Returns a human-readable formatted timestamp.
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy-MM-dd HH:mm:ss').format(dateTime);
+  }
 }
 
-class _DashboardPageState extends State<DashboardPage> {
-  int xp = 0;
-  int level = 1;
-  int glucoseStreak = 0;
-  int moodStreak = 0;
-  List<String> achievements = [];
-  List<String> missions = [];
-  List<String> missionStatus = [];
+// --- JournalEntry Model (from journal_entry.dart, adapted for common structure) ---
+class JournalEntry {
+  final String id;
+  final String username;
+  final String title;
+  final String content;
+  final String timestamp; // Stored as ISO 8601 string for easy parsing
+
+  JournalEntry({
+    required this.id,
+    required this.username,
+    required this.title,
+    required this.content,
+    required this.timestamp,
+  });
+
+  factory JournalEntry.fromJson(Map<String, dynamic> json) {
+    return JournalEntry(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      title: json['title'] as String,
+      content: json['content'] as String,
+      timestamp: json['timestamp'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'title': title,
+      'content': content,
+      'timestamp': timestamp,
+    };
+  }
+
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+  }
+}
+
+// --- MealEntry Model (from meal_tracking.dart) ---
+class MealEntry {
+  final String id;
+  final String mealDescription;
+  final String timestamp;
+  final String username;
+
+  MealEntry({
+    required this.id,
+    required this.mealDescription,
+    required this.timestamp,
+    required this.username,
+  });
+
+  factory MealEntry.fromJson(Map<String, dynamic> json) {
+    return MealEntry(
+      id: json['id'] as String,
+      mealDescription: json['mealDescription'] as String,
+      timestamp: json['timestamp'] as String,
+      username: json['username'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'mealDescription': mealDescription,
+      'timestamp': timestamp,
+      'username': username,
+    };
+  }
+
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('MMM dd,EEEE - hh:mm a').format(dateTime);
+  }
+}
+
+// --- MoodEntry Model (from mood_tracking.dart) ---
+class MoodEntry {
+  final String id;
+  final String username;
+  final String mood;
+  final String timestamp;
+
+  MoodEntry({
+    required this.id,
+    required this.username,
+    required this.mood,
+    required this.timestamp,
+  });
+
+  factory MoodEntry.fromJson(Map<String, dynamic> json) {
+    return MoodEntry(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      mood: json['mood'] as String,
+      timestamp: json['timestamp'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'mood': mood,
+      'timestamp': timestamp,
+    };
+  }
+
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+  }
+}
+
+// --- MedicineLog Model (assuming it's defined in medicine_tracker.dart or a common models file) ---
+class MedicineLog {
+  final String id;
+  final String username;
+  final String medicineName;
+  final String dosage;
+  final String notes;
+  final String timestamp; // When the medicine was actually taken/logged
+
+  MedicineLog({
+    required this.id,
+    required this.username,
+    required this.medicineName,
+    required this.dosage,
+    this.notes = '',
+    required this.timestamp,
+  });
+
+  factory MedicineLog.fromJson(Map<String, dynamic> json) {
+    return MedicineLog(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      medicineName: json['medicineName'] as String,
+      dosage: json['dosage'] as String,
+      notes: json['notes'] as String,
+      timestamp: json['timestamp'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'medicineName': medicineName,
+      'dosage': dosage,
+      'notes': notes,
+      'timestamp': timestamp,
+    };
+  }
+
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy-MM-dd hh:mm a').format(dateTime);
+  }
+}
+
+// --- MedicineSchedule Model (assuming it's defined in medicine_tracker.dart or a common models file) ---
+class MedicineSchedule {
+  final String id;
+  final String username;
+  final String medicineName;
+  final String dosage;
+  final String frequency; // e.g., "Daily", "Weekly", "Specific Days"
+  final List<String> reminderTimes; // List of times in "HH:mm" format
+  final String startDate; // ISO 8601 date string
+  final String? endDate; // ISO 8601 date string, nullable for ongoing
+  final List<String> daysOfWeek; // e.g., ["Monday", "Wednesday"] for specific days
+  final bool isActive;
+
+  MedicineSchedule({
+    required this.id,
+    required this.username,
+    required this.medicineName,
+    required this.dosage,
+    required this.frequency,
+    required this.reminderTimes,
+    required this.startDate,
+    this.endDate,
+    this.daysOfWeek = const [],
+    this.isActive = true,
+  });
+
+  factory MedicineSchedule.fromJson(Map<String, dynamic> json) {
+    return MedicineSchedule(
+      id: json['id'] as String,
+      username: json['username'] as String,
+      medicineName: json['medicineName'] as String,
+      dosage: json['dosage'] as String,
+      frequency: json['frequency'] as String,
+      reminderTimes: List<String>.from(json['reminderTimes'] as List),
+      startDate: json['startDate'] as String,
+      endDate: json['endDate'] as String?,
+      daysOfWeek: List<String>.from(json['daysOfWeek'] as List? ?? []),
+      isActive: json['isActive'] as bool,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'medicineName': medicineName,
+      'dosage': dosage,
+      'frequency': frequency,
+      'reminderTimes': reminderTimes,
+      'startDate': startDate,
+      'endDate': endDate,
+      'daysOfWeek': daysOfWeek,
+      'isActive': isActive,
+    };
+  }
+
+  String get formattedSchedule {
+    String times = reminderTimes.join(', ');
+    if (frequency == 'Daily') {
+      return '$frequency at $times';
+    } else if (frequency == 'Weekly' && daysOfWeek.isNotEmpty) {
+      return '$frequency on ${daysOfWeek.join(', ')} at $times';
+    }
+    return 'Schedule: $frequency at $times';
+  }
+}
+
+// --- End Models ---
+
+/// The main application widget for the Health Dashboard.
+class HomePageApp extends StatelessWidget {
+  const HomePageApp({super.key});
+  
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Health Dashboard',
+      debugShowCheckedModeBanner: false, // Removes the debug banner
+      
+      theme: ThemeData(
+        primarySwatch: Colors.deepPurple, // Main theme color
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
+          elevation: 4,
+        ),
+        cardTheme: CardThemeData(
+          // Using CardThemeData for theme definition
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+        ),
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+/// The HomePage screen displaying recent health records.
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  GeminiService _geminiService = GeminiService(apiKey: Gemini_API_KEY);
+  String _geminiResponse = "";
+  Timer? _speechClearTimer;
+  // Hardcoded username as requested
+  final String _username = "HealthUser";
+  final SpeechService _speechService = SpeechService();
+  String _wordsSpoken = "";
+  double _confidenceLevel = 0;
+  // Lists to store recent entries for each category
+  List<MoodEntry> _recentMoodEntries = [];
+  List<MealEntry> _recentMealEntries = [];
+  List<GlucoseEntry> _recentGlucoseEntries = [];
+  List<MedicineLog> _recentMedicineLogs = [];
+  List<MedicineSchedule> _upcomingMedicineSchedules = [];
+
+  // Define a list of pages for the BottomNavigationBar
+  late final List<Widget> _pages;
+  int _selectedIndex = 0; // Current selected index for BottomNavigationBar
 
   @override
   void initState() {
     super.initState();
-    loadData();
+    _pages = [
+      _buildDashboardView(),
+      const GlucoseEntryScreen(),
+      const JournalEntryScreen(),
+      const MealTrackerHomePage(),
+      const MoodTrackerHomePage(),
+      const MedicineTrackerApp(),
+      const EmergencyPage(),
+    ];
+    _loadRecentRecords();
+    _initSpeech(); // Initialize speech service
   }
 
-  Future<void> loadData() async {
-    final xp = await XPTracker.getXP();
-    final level = await XPTracker.getLevel();
-    final gStreak = await StreakManager.getStreak('glucose');
-    final mStreak = await StreakManager.getStreak('mood');
-    final achievements = await AchievementManager.getAchievements();
-    final missions = await MissionManager.getMissions();
-    final missionStatus = await SharedPreferences.getInstance()
-        .then((prefs) => prefs.getStringList('weekly_mission') ?? List.filled(missions.length, '0'));
+  Future<void> _initSpeech() async {
+    await _speechService.initSpeech();
+    setState(() {});
+  }
 
+  void _startListening() async {
+    await _speechService.startListening(_onSpeechResult, localeId: 'en_US'); // Change locale as needed
     setState(() {
-      xp = xp;
-      level = level;
-      glucoseStreak = gStreak;
-      moodStreak = mStreak;
-      achievements = achievements;
-      missions = missions;
-      missionStatus = missionStatus;
+      _confidenceLevel = 0;
     });
   }
 
-  Widget buildCard(String title, Widget content) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            content,
-          ],
+  void _stopListening() async {
+  await _speechService.stopListening();
+  setState(() {});
+
+  // Set a timer to clear the speech text after a delay
+  _speechClearTimer?.cancel();
+  _speechClearTimer = Timer(const Duration(seconds: 2), () {
+    setState(() {
+      _wordsSpoken = "";
+      _confidenceLevel = 0;
+    });
+  });
+  Widget _buildNoRecordsMessage(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Center(
+        child: Text(
+          message,
+          style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          textAlign: TextAlign.center,
         ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _speechClearTimer?.cancel();
+    _speechService.stopListening();
+    super.dispose();
+  }
+}
+  void _onSpeechResult(SpeechRecognitionResult result) {
+  final recognizedWords = result.recognizedWords.toLowerCase();
+  setState(() {
+    _wordsSpoken = recognizedWords;
+    _confidenceLevel = _speechService.getConfidenceLevel(result);
+  });
+
+  // Check for wake word if we're not already in Medico mode
+  if (!_isListeningForMedico && 
+      (recognizedWords.contains('medico') || 
+      recognizedWords.contains('medical') || 
+      recognizedWords.contains('mediko'))) {
+    setState(() {
+      _isListeningForMedico = true;
+      _geminiResponse = "I'm listening for your health question...";
+    });
+    return;
+  }
+
+  // If we're in Medico mode, process the query when speech stops
+  if (_isListeningForMedico && !_speechService.speechToText.isListening) {
+    _handleGeminiQuery(recognizedWords);
+    setState(() {
+      _isListeningForMedico = false;
+    });
+    return;
+  }
+
+  // Only process commands if the speech has sufficient confidence and we're not in Medico mode
+  if (_confidenceLevel > 0.7 && !_isListeningForMedico) {
+    if (recognizedWords.contains('glucose') || recognizedWords.contains('sugar')) {
+      _handleGlucoseCommand(recognizedWords);
+    }
+    else if (recognizedWords.contains('mood') || recognizedWords.contains('feeling')) {
+      _handleMoodCommand(recognizedWords);
+    }
+    else if (recognizedWords.contains('meal') || recognizedWords.contains('food') || recognizedWords.contains('ate')) {
+      _handleMealCommand(recognizedWords);
+    }
+  }
+
+  // Reset the clear timer
+  _speechClearTimer?.cancel();
+  _speechClearTimer = Timer(const Duration(seconds: 2), () {
+    if (!_speechService.speechToText.isListening) {
+      setState(() {
+        _wordsSpoken = "";
+        _confidenceLevel = 0;
+        if (!_isListeningForMedico) {
+          _geminiResponse = "";
+        }
+      });
+    }
+  });
+}
+bool _isListeningForMedico = false;
+void _handleGeminiQuery(String recognizedWords) async {
+  // Extract the query after the wake word
+  String query = recognizedWords;
+  if (recognizedWords.contains('medico')) {
+    query = recognizedWords.split('medico').last.trim();
+  } 
+  else if (recognizedWords.contains('medical')) {
+    query = recognizedWords.split('medical').last.trim();
+  }
+  else if (recognizedWords.contains('mediko')) {
+    query = recognizedWords.split('mediko').last.trim();
+  }
+
+  if (query.isEmpty) {
+    setState(() {
+      _geminiResponse = "I'm listening for your health question...";
+    });
+    return;
+  }
+
+  // Get response from Gemini
+  final response = await _geminiService.getSingleHealthResponse(query);
+  
+  setState(() {
+    _geminiResponse = response;
+  });
+}
+
+void _handleGlucoseCommand(String recognizedWords) {
+  // Extract the glucose value from the recognized words
+  String glucoseValue = recognizedWords.replaceAll(RegExp(r'[^0-9]'), '');
+
+  if (glucoseValue.isEmpty) {
+    setState(() {
+      _geminiResponse = "I didn't hear a valid glucose value. Please say something like 'glucose 120'";
+    });
+    return;
+  }
+
+  // Create a new glucose entry directly
+  final newEntry = GlucoseEntry(
+    username: _username,
+    glucoseValue: glucoseValue,
+    timestamp: DateTime.now().toIso8601String(),
+  );
+
+  // Save to shared preferences
+  _saveGlucoseEntry(newEntry);
+  
+  setState(() {
+    _geminiResponse = "Recorded glucose: $glucoseValue mg/dL";
+    // Update recent glucose entries for display
+    _recentGlucoseEntries.insert(0, newEntry);
+    if (_recentGlucoseEntries.length > 5) {
+      _recentGlucoseEntries = _recentGlucoseEntries.sublist(0, 5);
+    }
+  });
+}
+
+Future<void> _saveGlucoseEntry(GlucoseEntry entry) async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? entriesJsonString = prefs.getString('glucoseEntries');
+  List<dynamic> jsonList = [];
+  
+  if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+    jsonList = jsonDecode(entriesJsonString);
+  }
+  
+  jsonList.add(entry.toJson());
+  await prefs.setString('glucoseEntries', jsonEncode(jsonList));
+}
+
+void _handleMoodCommand(String recognizedWords) {
+  // Map of mood keywords to mood categories
+  final moodMap = {
+    'happy': 'Happy',
+    'sad': 'Sad',
+    'neutral': 'Neutral',
+    'excited': 'Excited',
+    'anxious': 'Anxious',
+    'stressed': 'Stressed',
+    'calm': 'Calm',
+    'angry': 'Angry',
+    'tired': 'Tired',
+    'energetic': 'Energetic'
+  };
+
+  // Find which mood was mentioned
+  String? detectedMood;
+  for (final entry in moodMap.entries) {
+    if (recognizedWords.contains(entry.key)) {
+      detectedMood = entry.value;
+      break;
+    }
+  }
+
+  if (detectedMood != null) {
+    // Create a new mood entry directly
+    final newEntry = MoodEntry(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      username: _username,
+      mood: detectedMood,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+
+    // Save to shared preferences
+    _saveMoodEntry(newEntry);
+    
+    setState(() {
+      _geminiResponse = "Recorded mood: $detectedMood";
+      // Update recent mood entries for display
+      _recentMoodEntries.insert(0, newEntry);
+      if (_recentMoodEntries.length > 5) {
+        _recentMoodEntries = _recentMoodEntries.sublist(0, 5);
+      }
+    });
+  } else {
+    setState(() {
+      _geminiResponse = "I didn't recognize the mood. Please say something like 'I feel happy'";
+    });
+  }
+}
+
+Future<void> _saveMoodEntry(MoodEntry entry) async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? entriesJsonString = prefs.getString('moodEntries');
+  List<dynamic> jsonList = [];
+  
+  if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+    jsonList = jsonDecode(entriesJsonString);
+  }
+  
+  jsonList.add(entry.toJson());
+  await prefs.setString('moodEntries', jsonEncode(jsonList));
+}
+
+void _handleMealCommand(String recognizedWords) {
+  // Extract the meal description (everything after "meal" or "food")
+  String mealDescription = recognizedWords;
+  if (recognizedWords.contains('meal')) {
+    mealDescription = recognizedWords.split('meal').last.trim();
+  } else if (recognizedWords.contains('food')) {
+    mealDescription = recognizedWords.split('food').last.trim();
+  } else if (recognizedWords.contains('ate')) {
+    mealDescription = recognizedWords.split('ate').last.trim();
+  }
+
+  if (mealDescription.isNotEmpty) {
+    // Create a new meal entry
+    final newEntry = MealEntry(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      username: _username,
+      mealDescription: mealDescription,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+
+    // Save to shared preferences
+    _saveMealEntry(newEntry);
+    
+    setState(() {
+      _geminiResponse = "Recorded meal: $mealDescription";
+      // Update recent meal entries for display
+      _recentMealEntries.insert(0, newEntry);
+      if (_recentMealEntries.length > 5) {
+        _recentMealEntries = _recentMealEntries.sublist(0, 5);
+      }
+    });
+  } else {
+    setState(() {
+      _geminiResponse = "I didn't hear what you ate. Please say something like 'I ate pasta'";
+    });
+  }
+}
+
+Future<void> _saveMealEntry(MealEntry entry) async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? entriesJsonString = prefs.getString('mealEntries');
+  List<dynamic> jsonList = [];
+  
+  if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+    jsonList = jsonDecode(entriesJsonString);
+  }
+  
+  jsonList.add(entry.toJson());
+  await prefs.setString('mealEntries', jsonEncode(jsonList));
+}
+
+  /// Loads recent records from SharedPreferences for Mood, Meal, Glucose, and Medicine.
+  /// Filters entries to only include those from the last 3 days for logs,
+  /// and relevant upcoming schedules for medicine.
+  Future<void> _loadRecentRecords() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final threeDaysAgo = now.subtract(const Duration(days: 3));
+
+    // --- Load Mood Entries ---
+    final String? moodEntriesJsonString = prefs.getString('moodEntries');
+    if (moodEntriesJsonString != null && moodEntriesJsonString.isNotEmpty) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(moodEntriesJsonString);
+        List<MoodEntry> allMoodEntries =
+            jsonList.map((json) => MoodEntry.fromJson(json)).toList();
+        _recentMoodEntries = allMoodEntries
+            .where((entry) =>
+                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .toList();
+        _recentMoodEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
+      } catch (e) {
+        print('Error decoding mood entries: $e');
+      }
+    }
+
+    // --- Load Meal Entries ---
+    final String? mealEntriesJsonString = prefs.getString('mealEntries');
+    if (mealEntriesJsonString != null && mealEntriesJsonString.isNotEmpty) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(mealEntriesJsonString);
+        List<MealEntry> allMealEntries =
+            jsonList.map((json) => MealEntry.fromJson(json)).toList();
+        _recentMealEntries = allMealEntries
+            .where((entry) =>
+                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .toList();
+        _recentMealEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
+      } catch (e) {
+        print('Error decoding meal entries: $e');
+      }
+    }
+
+    // --- Load Glucose Entries ---
+    final String? glucoseEntriesJsonString = prefs.getString('glucoseEntries');
+    if (glucoseEntriesJsonString != null &&
+        glucoseEntriesJsonString.isNotEmpty) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(glucoseEntriesJsonString);
+        List<GlucoseEntry> allGlucoseEntries =
+            jsonList.map((json) => GlucoseEntry.fromJson(json)).toList();
+        _recentGlucoseEntries = allGlucoseEntries
+            .where((entry) =>
+                DateTime.parse(entry.timestamp).isAfter(threeDaysAgo))
+            .toList();
+        _recentGlucoseEntries.sort(
+            (a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest
+      } catch (e) {
+        print('Error decoding glucose entries: $e');
+      }
+    }
+
+    // --- Load Recent Medicine Logs ---
+    final String? medicineLogsJsonString = prefs.getString('medicineLogs');
+    if (medicineLogsJsonString != null && medicineLogsJsonString.isNotEmpty) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(medicineLogsJsonString);
+        List<MedicineLog> allMedicineLogs =
+            jsonList.map((json) => MedicineLog.fromJson(json)).toList();
+        _recentMedicineLogs = allMedicineLogs
+            .where((log) => DateTime.parse(log.timestamp).isAfter(threeDaysAgo))
+            .toList();
+        _recentMedicineLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      } catch (e) {
+        print('Error decoding medicine logs: $e');
+      }
+    }
+
+    // --- Load Upcoming Medicine Schedules ---
+    final String? medicineSchedulesJsonString =
+        prefs.getString('medicineSchedules');
+    if (medicineSchedulesJsonString != null &&
+        medicineSchedulesJsonString.isNotEmpty) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(medicineSchedulesJsonString);
+        List<MedicineSchedule> allSchedules =
+            jsonList.map((json) => MedicineSchedule.fromJson(json)).toList();
+
+        // Filter for active and upcoming schedules
+        List<MedicineSchedule> relevantSchedules = [];
+        final now = DateTime.now();
+        for (var schedule in allSchedules) {
+          if (!schedule.isActive) continue;
+
+          final startDate = DateTime.parse(schedule.startDate);
+          if (schedule.endDate != null) {
+            final endDate = DateTime.parse(schedule.endDate!);
+            if (now.isAfter(endDate)) continue; // Schedule has ended
+          }
+          if (now.isBefore(startDate.subtract(const Duration(days: 1)))) continue; // Schedule hasn't started yet (give some buffer)
+
+          // Check if today is one of the scheduled days for weekly frequency
+          if (schedule.frequency == 'Weekly' && schedule.daysOfWeek.isNotEmpty) {
+            final String todayDay = DateFormat('EEEE').format(now); // e.g., "Wednesday"
+            if (!schedule.daysOfWeek.contains(todayDay)) {
+              continue; // Not scheduled for today
+            }
+          }
+
+          // Check if there's an upcoming reminder time today or very soon
+          bool hasUpcomingReminder = false;
+          for (String timeStr in schedule.reminderTimes) {
+            final parts = timeStr.split(':');
+            if (parts.length != 2) continue; // Invalid time format
+            final int hour = int.parse(parts[0]);
+            final int minute = int.parse(parts[1]);
+
+            final DateTime reminderDateTime = DateTime(
+              now.year,
+              now.month,
+              now.day,
+              hour,
+              minute,
+            );
+
+            // Consider reminders in the future or very recently passed (e.g., within last 15 mins)
+            if (reminderDateTime.isAfter(now.subtract(const Duration(minutes: 15)))) {
+              hasUpcomingReminder = true;
+              break;
+            }
+          }
+          if (hasUpcomingReminder) {
+            relevantSchedules.add(schedule);
+          }
+        }
+        _upcomingMedicineSchedules = relevantSchedules;
+        // Sort upcoming schedules (e.g., by medicine name or first reminder time)
+        _upcomingMedicineSchedules.sort((a, b) => a.medicineName.compareTo(b.medicineName));
+
+      } catch (e) {
+        print('Error decoding medicine schedules: $e');
+      }
+    }
+
+    // Update the UI once all data is loaded and filtered
+    setState(() {});
+  }
+
+  // Method to handle item tap in BottomNavigationBar
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  // This method builds the main dashboard view, which will be the first page.
+  Widget _buildDashboardView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Hello Username Section
+          Card(
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            color: Colors.deepPurple.shade100, // Light purple background for the greeting
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.waving_hand, size: 30, color: Colors.deepPurple),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Hello, $_username!',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Mood Entries Section
+          _buildSectionTitle('Recent Moods'),
+          _recentMoodEntries.isEmpty
+              ? _buildNoRecordsMessage('No mood entries in the last 3 days.')
+              : ListView.builder(
+                  shrinkWrap: true, // Makes ListView only take up needed space
+                  physics: const NeverScrollableScrollPhysics(), // Disables ListView's own scrolling
+                  itemCount: _recentMoodEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = _recentMoodEntries[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.blue.shade50, // Light blue for mood cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mood: ${entry.mood}',
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Recorded: ${entry.formattedTimestamp}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+
+          // Meal Entries Section
+          _buildSectionTitle('Recent Meals'),
+          _recentMealEntries.isEmpty
+              ? _buildNoRecordsMessage('No meal entries in the last 3 days.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentMealEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = _recentMealEntries[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.teal.shade50, // Light teal for meal cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Meal: ${entry.mealDescription}',
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Recorded: ${entry.formattedTimestamp}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+
+          // Glucose Entries Section
+          _buildSectionTitle('Recent Glucose Readings'),
+          _recentGlucoseEntries.isEmpty
+              ? _buildNoRecordsMessage('No glucose entries in the last 3 days.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentGlucoseEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = _recentGlucoseEntries[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.blue.shade50, // Light blue for glucose cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Glucose: ${entry.glucoseValue} mg/dL',
+                              style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade800),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Recorded: ${entry.formattedTimestamp}',
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.black54),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+
+          // --- Medicine Reminder Section ---
+          _buildSectionTitle('Upcoming Medicine Reminders'),
+          _upcomingMedicineSchedules.isEmpty
+              ? _buildNoRecordsMessage('No upcoming medicine reminders.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _upcomingMedicineSchedules.length,
+                  itemBuilder: (context, index) {
+                    final schedule = _upcomingMedicineSchedules[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.purple.shade50, // Light purple for medicine cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${schedule.medicineName} - ${schedule.dosage}',
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Schedule: ${schedule.formattedSchedule}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                            Text(
+                              'Times: ${schedule.reminderTimes.join(', ')}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+
+          // --- Recent Medicine Logs Section ---
+          _buildSectionTitle('Recent Medicine Logs'),
+          _recentMedicineLogs.isEmpty
+              ? _buildNoRecordsMessage('No recent medicine logs.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentMedicineLogs.length,
+                  itemBuilder: (context, index) {
+                    final log = _recentMedicineLogs[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                      color: Colors.purple.shade50, // Light purple for medicine cards
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${log.medicineName} - ${log.dosage}',
+                              style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.purple),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Taken: ${log.formattedTimestamp}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                            ),
+                            if (log.notes.isNotEmpty)
+                              Text(
+                                'Notes: ${log.notes}',
+                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
@@ -70,57 +1048,315 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard')),
-      body: RefreshIndicator(
-        onRefresh: loadData,
-        child: ListView(
-          children: [
-            buildCard('Level & XP', Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Level: $level', style: const TextStyle(fontSize: 16)),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: xp / (level * 100),
-                  minHeight: 10,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+      // appBar: AppBar(
+      //   //title: const Text('Your Health Dashboard'),
+      //   centerTitle: true,
+      //   shape: const RoundedRectangleBorder(
+      //     borderRadius: BorderRadius.vertical(
+      //       bottom: Radius.circular(20),
+      //     ),
+      //   ),
+      // ),
+    //   body: Stack(
+    //   children: [
+    //     _pages[_selectedIndex],
+    //     if (_wordsSpoken.isNotEmpty)
+    //       Positioned(
+    //         bottom: 100,
+    //         left: 0,
+    //         right: 0,
+    //         child: Container(
+    //           padding: EdgeInsets.all(16),
+    //           color: Colors.black.withOpacity(0.7),
+    //           child: Column(
+    //             children: [
+    //               Text(
+    //                 _wordsSpoken,
+    //                 style: TextStyle(
+    //                   fontSize: 20,
+    //                   color: Colors.white,
+    //                 ),
+    //                 textAlign: TextAlign.center,
+    //               ),
+    //               if (_confidenceLevel > 0)
+    //                 Text(
+    //                   "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
+    //                   style: TextStyle(
+    //                     fontSize: 16,
+    //                     color: Colors.white70,
+    //                   ),
+    //                 ),
+    //             ],
+    //           ),
+    //         ),
+    //       ),
+    //   ],
+    // ),// Display the selected page
+
+
+
+
+
+//       body : Stack(
+//   children: [
+//     _pages[_selectedIndex],
+//     if (_wordsSpoken.isNotEmpty)
+//       Positioned(
+//         bottom: 100,
+//         left: 0,
+//         right: 0,
+//         child: Container(
+//           padding: EdgeInsets.all(16),
+//           color: Colors.black.withOpacity(0.7),
+//           child: Column(
+//             children: [
+//               Text(
+//                 _wordsSpoken,
+//                 style: TextStyle(
+//                   fontSize: 20,
+//                   color: Colors.white,
+//                 ),
+//                 textAlign: TextAlign.center,
+//               ),
+//               if (_confidenceLevel > 0)
+//                 Text(
+//                   "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
+//                   style: TextStyle(
+//                     fontSize: 16,
+//                     color: Colors.white70,
+//                   ),
+//                 ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     if (_geminiResponse.isNotEmpty)
+//       Positioned(
+//         bottom: 180, // Above the speech result
+//         left: 0,
+//         right: 0,
+//         child: Container(
+//           padding: EdgeInsets.all(16),
+//           color: Colors.green.withOpacity(0.7),
+//           child: Text(
+//             _geminiResponse,
+//             style: TextStyle(
+//               fontSize: 18,
+//               color: Colors.white,
+//             ),
+//             textAlign: TextAlign.center,
+//           ),
+//         ),
+//       ),
+//   ],
+// ),
+
+
+
+  body : Stack(
+  children: [
+    _pages[_selectedIndex],
+    if (_wordsSpoken.isNotEmpty)
+      Positioned(
+        bottom: 100,
+        left: 0,
+        right: 0,
+        child: Container(
+          padding: EdgeInsets.all(16),
+          color: Colors.black.withOpacity(0.7),
+          child: Column(
+            children: [
+              Text(
+                _wordsSpoken,
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.white,
                 ),
-                const SizedBox(height: 4),
-                Text('$xp / ${level * 100} XP'),
-              ],
-            )),
-            buildCard('Streaks', Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Column(children: [
-                  const Text('Glucose'),
-                  Text('$glucoseStreak days')
-                ]),
-                Column(children: [
-                  const Text('Mood'),
-                  Text('$moodStreak days')
-                ]),
-              ],
-            )),
-            buildCard('Achievements', Wrap(
-              spacing: 8,
-              children: achievements.map((a) => Chip(label: Text(a))).toList(),
-            )),
-            buildCard('Weekly Missions', Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: List.generate(missions.length, (i) => Row(
-                children: [
-                  Icon(
-                    missionStatus[i] == '1' ? Icons.check_circle : Icons.radio_button_unchecked,
-                    color: missionStatus[i] == '1' ? Colors.green : Colors.grey,
+                textAlign: TextAlign.center,
+              ),
+              if (_confidenceLevel > 0)
+                Text(
+                  "Confidence: ${(_confidenceLevel * 100).toStringAsFixed(1)}%",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
                   ),
-                  const SizedBox(width: 8),
-                  Text(missions[i]),
-                ],
-              )),
-            )),
-          ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    if (_geminiResponse.isNotEmpty)
+      Positioned(
+        bottom: 180,
+        left: 0,
+        right: 0,
+        child: Container(
+          padding: EdgeInsets.all(16),
+          color: Colors.green.withOpacity(0.7),
+          child: Column(
+            children: [
+              Text(
+                "Medico Response:",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                _geminiResponse,
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    if (_wordsSpoken.toLowerCase().contains('medico') && 
+      _wordsSpoken.toLowerCase().split('medico').last.trim().isNotEmpty)
+      Positioned(
+        top: 100,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              "Listening for health query...",
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+      if (_isListeningForMedico)
+  Positioned(
+    top: 100,
+    left: 0,
+    right: 0,
+    child: Center(
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.deepPurple.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          "Listening for health query...",
+          style: TextStyle(
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    ),
+  ),
+  ],
+  
+),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // Ensure all items are visible
+        backgroundColor: Colors.deepPurple,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white70,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bloodtype),
+            label: 'Glucose',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: 'Note',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.restaurant),
+            label: 'Meal',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.sentiment_satisfied_alt),
+            label: 'Mood',
+          ),
+          BottomNavigationBarItem(
+            // Added Medicine Tracker icon
+            icon: Icon(Icons.medical_services),
+            label: 'Meds',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.phone),
+            label: 'Emerg',
+)
+        ],
+        
+      ),
+    //   floatingActionButton: FloatingActionButton(
+    //   onPressed: _speechService.speechToText.isListening ? _stopListening : _startListening,
+    //   tooltip: 'Listen',
+    //   child: Icon(
+    //     _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
+    //     color: Colors.white,
+    //   ),
+    //   backgroundColor: Colors.deepPurple, // Match your theme
+    // ),
+    floatingActionButton: FloatingActionButton(
+  onPressed: _speechService.speechToText.isListening ? _stopListening : _startListening,
+  tooltip: 'Listen',
+  child: Icon(
+    _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
+    color: Colors.white,
+  ),
+  backgroundColor: _isListeningForMedico 
+      ? Colors.green 
+      : (_speechService.speechToText.isListening 
+          ? Colors.deepPurple 
+          : Colors.deepPurple),
+),
+    );
+  }
+
+  // Helper widget to build consistent section titles
+  Widget _buildSectionTitle(String title) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.deepPurple,
+          ),
+        ),
+        const Divider(height: 20, thickness: 1, color: Colors.deepPurpleAccent),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  // Helper widget to display a message when no records are found in a section
+  Widget _buildNoRecordsMessage(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Center(
+        child: Text(
+          message,
+          style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          textAlign: TextAlign.center,
         ),
       ),
     );
