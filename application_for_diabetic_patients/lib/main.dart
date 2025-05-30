@@ -49,6 +49,8 @@ void main() async {
 }
 
 class DiabetesApp extends StatelessWidget {
+  const DiabetesApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

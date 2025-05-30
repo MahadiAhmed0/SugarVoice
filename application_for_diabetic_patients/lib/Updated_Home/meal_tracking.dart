@@ -456,7 +456,7 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
                               ),
                             ),
                             subtitle: Text(
-                              '${_selectedMealType} - ${mealEntry.formattedTimestamp}', // Use formattedTimestamp
+                              '$_selectedMealType - ${mealEntry.formattedTimestamp}', // Use formattedTimestamp
                               style: TextStyle(color: Colors.grey[600]),
                             ),
                             trailing: IconButton(

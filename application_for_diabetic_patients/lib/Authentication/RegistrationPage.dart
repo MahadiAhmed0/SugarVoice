@@ -4,6 +4,8 @@ import 'login_page.dart';
 class RegistrationPage extends StatelessWidget {
   final Color primaryColor = Color(0xFF4B0082);
 
+  RegistrationPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

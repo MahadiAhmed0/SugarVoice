@@ -10,6 +10,8 @@ class DiabetesTypeSelectionPage extends StatelessWidget {
     'Not Sure'
   ];
 
+  const DiabetesTypeSelectionPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

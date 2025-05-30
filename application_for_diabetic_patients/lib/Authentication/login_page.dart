@@ -7,7 +7,7 @@ class LoginPage extends StatelessWidget {
   final Color primaryColor = const Color(0xFF4B0082); 
 
   // Add the const constructor with Key parameter
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
