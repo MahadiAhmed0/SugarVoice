@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:application_for_diabetic_patients/Constansts.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/EmergencyPage.dart';
 import 'package:application_for_diabetic_patients/Utils/gemini_service.dart';
 import 'package:application_for_diabetic_patients/Utils/speech_service.dart';
 import 'package:flutter/material.dart';
@@ -303,6 +304,7 @@ class HomePageApp extends StatelessWidget {
     return MaterialApp(
       title: 'Health Dashboard',
       debugShowCheckedModeBanner: false, // Removes the debug banner
+      
       theme: ThemeData(
         primarySwatch: Colors.deepPurple, // Main theme color
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -362,6 +364,7 @@ class _HomePageState extends State<HomePage> {
       const MealTrackerHomePage(),
       const MoodTrackerHomePage(),
       const MedicineTrackerApp(),
+      const EmergencyPage(),
     ];
     _loadRecentRecords();
     _initSpeech(); // Initialize speech service
@@ -1045,15 +1048,15 @@ Future<void> _saveMealEntry(MealEntry entry) async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your Health Dashboard'),
-        centerTitle: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(20),
-          ),
-        ),
-      ),
+      // appBar: AppBar(
+      //   //title: const Text('Your Health Dashboard'),
+      //   centerTitle: true,
+      //   shape: const RoundedRectangleBorder(
+      //     borderRadius: BorderRadius.vertical(
+      //       bottom: Radius.circular(20),
+      //     ),
+      //   ),
+      // ),
     //   body: Stack(
     //   children: [
     //     _pages[_selectedIndex],
@@ -1270,8 +1273,8 @@ Future<void> _saveMealEntry(MealEntry entry) async {
         onTap: _onItemTapped,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            icon: Icon(Icons.home),
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.bloodtype),
@@ -1279,7 +1282,7 @@ Future<void> _saveMealEntry(MealEntry entry) async {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.book),
-            label: 'Journal',
+            label: 'Note',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.restaurant),
@@ -1292,8 +1295,12 @@ Future<void> _saveMealEntry(MealEntry entry) async {
           BottomNavigationBarItem(
             // Added Medicine Tracker icon
             icon: Icon(Icons.medical_services),
-            label: 'Medicine',
+            label: 'Meds',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.phone),
+            label: 'Emerg',
+)
         ],
         
       ),

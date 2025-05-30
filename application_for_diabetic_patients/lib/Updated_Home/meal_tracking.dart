@@ -257,10 +257,10 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
       appBar: AppBar(
         title: const Text('Meal Tracker'),
         centerTitle: true,
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.deepPurple,
         elevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
       body: Padding(

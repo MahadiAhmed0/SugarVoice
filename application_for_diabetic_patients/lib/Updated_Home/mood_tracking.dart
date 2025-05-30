@@ -181,6 +181,9 @@ class _MoodTrackerHomePageState extends State<MoodTrackerHomePage> {
       appBar: AppBar(
         title: const Text('Mood Tracker'),
         centerTitle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
