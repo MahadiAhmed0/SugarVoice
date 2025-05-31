@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
 import 'package:intl/intl.dart'; // Required for date formatting
 import 'package:speech_to_text/speech_recognition_result.dart'; // Required for speech recognition
+import 'package:flutter_tts/flutter_tts.dart'; // Import flutter_tts
 
 // Import the other tracking pages and their models
 import 'package:application_for_diabetic_patients/Updated_Home/glucose_input.dart';
@@ -343,6 +344,8 @@ class _HomePageState extends State<HomePage> {
   double _confidenceLevel = 0;
   bool _isListeningForMedico = false;
 
+  final FlutterTts flutterTts = FlutterTts(); // Initialize FlutterTts
+
   // Lists to store recent entries for each category
   List<MoodEntry> _recentMoodEntries = [];
   List<MealEntry> _recentMealEntries = [];
@@ -361,24 +364,47 @@ class _HomePageState extends State<HomePage> {
   int _mealStreak = 0;
 
   // Current selected index for BottomNavigationBar
-  late final List<Widget> _pages;
-  int _selectedIndex = 0;
+  // No longer needed as we're using Navigator.push
+  // late final List<Widget> _pages;
+  int _selectedIndex = 0; // Keep for BottomNavigationBar visual state
 
   @override
   void initState() {
     super.initState();
-    _pages = [
-      _buildDashboardView(),
-      const GlucoseEntryScreen(),
-      const JournalEntryScreen(),
-      const MealTrackerHomePage(),
-      const MoodTrackerHomePage(),
-      const MedicineTrackerApp(),
-      const EmergencyPage(),
-    ];
+    _initTts(); // Initialize TTS
     _initGamification();
     _loadRecentRecords();
     _initSpeech(); // Initialize speech service
+    _speakDailyGreeting(); // Speak greeting on app start
+  }
+
+  @override
+  void dispose() {
+    flutterTts.stop(); // Stop TTS if it's speaking
+    super.dispose();
+  }
+
+  Future<void> _initTts() async {
+    await flutterTts.setLanguage("en-US");
+    await flutterTts.setPitch(1.0);
+    await flutterTts.setSpeechRate(0.5);
+  }
+
+  Future<void> _speak(String text) async {
+    await flutterTts.speak(text);
+  }
+
+  Future<void> _speakDailyGreeting() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? lastGreetingDate = prefs.getString('last_greeting_date');
+    final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    if (lastGreetingDate != todayDate) {
+      // If the last greeting was not today, speak it and update the date
+      String greeting = "Hello morning, Did you take your medicine today?";
+      await _speak(greeting);
+      await prefs.setString('last_greeting_date', todayDate);
+    }
   }
 
   Future<void> _initGamification() async {
@@ -812,7 +838,7 @@ class _HomePageState extends State<HomePage> {
             }
           }
 
-          // Check if there's an upcoming reminder time today or very soon
+          // Check if there's an upcoming reminder time today or very soon (e.g., within next 24 hours)
           bool hasUpcomingReminder = false;
           for (String timeStr in schedule.reminderTimes) {
             final parts = timeStr.split(':');
@@ -828,7 +854,8 @@ class _HomePageState extends State<HomePage> {
               minute,
             );
             // Consider reminders in the future or very recently passed (e.g., within last 15 mins)
-            if (reminderDateTime.isAfter(now.subtract(const Duration(minutes: 15)))) {
+            if (reminderDateTime.isAfter(now.subtract(const Duration(minutes: 15))) &&
+                reminderDateTime.isBefore(now.add(const Duration(days: 1)))) {
               hasUpcomingReminder = true;
               break;
             }
@@ -849,11 +876,47 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
-  // Method to handle item tap in BottomNavigationBar
-  void _onItemTapped(int index) {
+  // Modified _onItemTapped to use Navigator.push and reload data on pop
+  void _onItemTapped(int index) async {
     setState(() {
-      _selectedIndex = index;
+      _selectedIndex = index; // Update selected index immediately for visual feedback
     });
+
+    Widget pageToPush;
+    switch (index) {
+      case 0: // Home - no push needed, already there or navigated back to
+        return;
+      case 1:
+        pageToPush = const GlucoseEntryScreen();
+        break;
+      case 2:
+        pageToPush = const JournalEntryScreen();
+        break;
+      case 3:
+        pageToPush = const MealTrackerHomePage();
+        break;
+      case 4:
+        pageToPush = const MoodTrackerHomePage();
+        break;
+      case 5:
+        pageToPush = const MedicineTrackerApp();
+        break;
+      case 6:
+        pageToPush = const EmergencyPage();
+        break;
+      default:
+        pageToPush = _buildDashboardView(); // Fallback to home
+    }
+
+    // Push the new page and wait for it to be popped
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => pageToPush),
+    );
+
+    // When the pushed page is popped, reload all recent records and gamification data
+    _loadRecentRecords();
+    _updateGamificationData();
   }
 
   // This method builds the main dashboard view, which will be the first page.
@@ -1333,9 +1396,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Health Dashboard'),
+        centerTitle: true,
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+      ),
       body: Stack(
         children: [
-          _pages[_selectedIndex],
+          _buildDashboardView(), // The main content of the homepage
           if (_wordsSpoken.isNotEmpty)
             Positioned(
               bottom: 100,
