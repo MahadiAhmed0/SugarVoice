@@ -1,12 +1,17 @@
-import 'package:application_for_diabetic_patients/Home/MedicineLogPage.dart';
+import 'package:application_for_diabetic_patients/Constansts.dart';
 import 'package:flutter/material.dart';
-import 'Intro/language_selection_page.dart';
-
-import 'Updated_Home/journal_entry.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_gemini/flutter_gemini.dart';
 import 'Updated_Home/Homepage.dart';
 
 
-void main() => runApp(const HomePageApp());
+void main() async {
+  Gemini.init(apiKey: Gemini_API_KEY);
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(); // Initialize Firebase
+  runApp(HomePageApp());
+}
 
 class DiabetesApp extends StatelessWidget {
   @override
@@ -14,7 +19,17 @@ class DiabetesApp extends StatelessWidget {
     return MaterialApp(
       title: 'Diabetes App',
       debugShowCheckedModeBanner: false,
-      home: LanguageSelectionPage(),
+      home: HomePageApp(),
     );
   }
 }
+
+
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   await Firebase.initializeApp(); // Make sure Firebase is initialized
+//   runApp(MaterialApp(
+//     debugShowCheckedModeBanner: false,
+//     home: RegisterPage(),
+//   ));
+// }

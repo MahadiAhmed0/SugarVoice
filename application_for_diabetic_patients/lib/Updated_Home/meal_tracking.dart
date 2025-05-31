@@ -1,10 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert'; // Required for JSON encoding/decoding
+
+// Import gamification managers
+import 'package:application_for_diabetic_patients/Updated_Home/achievement_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/mission_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/streak_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/xp_tracker.dart';
+
+// --- MealEntry Model ---
+/// Represents a single meal entry.
+class MealEntry {
+  final String id;
+  final String mealDescription;
+  final String timestamp; // Stored as ISO 8601 string
+  final String username; // Added username for consistency with other models
+
+  MealEntry({
+    required this.id,
+    required this.mealDescription,
+    required this.timestamp,
+    required this.username,
+  });
+  /// Factory constructor to create a [MealEntry] from a JSON map.
+  factory MealEntry.fromJson(Map<String, dynamic> json) {
+    return MealEntry(
+      id: json['id'] as String,
+      mealDescription: json['mealDescription'] as String,
+      timestamp: json['timestamp'] as String,
+      username: json['username'] as String,
+    );
+  }
+
+  /// Converts a [MealEntry] object to a JSON map.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'mealDescription': mealDescription,
+      'timestamp': timestamp,
+      'username': username,
+    };
+  }
+
+  /// Returns a human-readable formatted timestamp.
+  String get formattedTimestamp {
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('MMM dd,EEEE - hh:mm a').format(dateTime);
+  }
+}
+// --- End MealEntry Model ---
 
 class MealTrackerApp extends StatelessWidget {
   const MealTrackerApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -29,7 +78,6 @@ class MealTrackerHomePage extends StatefulWidget {
 class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
   // Hardcoded username as requested
   final String _username = "JohnDoe";
-
   // List of meal types
   final List<String> _mealTypes = [
     "Breakfast",
@@ -38,65 +86,31 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
     "Snacks",
     "Other"
   ];
-
   // Currently selected meal type
   String? _selectedMealType;
 
   // Controller for the meal input field
   final TextEditingController _mealController = TextEditingController();
-
   // Variable to store the current date and time for display, automatically updated
   DateTime _currentDateTime = DateTime.now();
-
   // List to store tracked meals
-  final List<Map<String, String>> _trackedMeals = [];
-
+  List<MealEntry> _trackedMeals = []; // Changed to store MealEntry objects
   // Timer for updating the current date and time display
-  // ignore: unused_field
   late final Ticker _ticker; // Using Ticker for more efficient time updates
+  late SharedPreferences _prefs; // SharedPreferences instance
 
   @override
   void initState() {
     super.initState();
     // Set initial selected meal type to the first one
     _selectedMealType = _mealTypes[0];
-
     // Initialize a Ticker to update the current time display every second
     _ticker = Ticker((Duration elapsed) {
       setState(() {
         _currentDateTime = DateTime.now();
       });
     })..start();
-  }
-
-  // Function to add a meal to the tracked list
-  void _addMeal() {
-    if (_mealController.text.isNotEmpty && _selectedMealType != null) {
-      setState(() {
-        _trackedMeals.add({
-          "username": _username,
-          "mealType": _selectedMealType!,
-          "meal": _mealController.text,
-          // Automatically use the current date and time for the timestamp
-          "timestamp": DateTime.now().toLocal().toString(),
-        });
-        _mealController.clear(); // Clear the input field after adding
-      });
-      // Show a confirmation message (using SnackBar instead of alert)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Meal added: ${_selectedMealType!} - ${_trackedMeals.last["meal"]}'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a meal and select a meal type.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+    _initSharedPreferences(); // Initialize SharedPreferences and load data
   }
 
   @override
@@ -106,16 +120,175 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
     super.dispose();
   }
 
+  // --- SharedPreferences Initialization & CRUD Operations ---
+
+  /// Initializes SharedPreferences and then loads existing meal entries.
+  Future<void> _initSharedPreferences() async {
+    _prefs = await SharedPreferences.getInstance();
+    _loadMealEntries();
+  }
+
+  /// Read: Loads meal entries from local storage (SharedPreferences).
+  Future<void> _loadMealEntries() async {
+    try {
+      final String? entriesJsonString = _prefs.getString('mealEntries');
+      if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+        final List<dynamic> jsonList = jsonDecode(entriesJsonString);
+        setState(() {
+          _trackedMeals = jsonList.map((json) => MealEntry.fromJson(json)).toList();
+          // Sort by latest timestamp first upon loading
+          _trackedMeals.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        });
+      }
+    } catch (e) {
+      _showMessage('Error loading meal entries: $e');
+      print('Error loading meal entries: $e'); // For debugging
+    }
+  }
+
+  /// Create: Saves a new meal entry to local storage.
+  void _saveMealEntry() async {
+    if (_mealController.text.isNotEmpty && _selectedMealType != null) {
+      final newEntry = MealEntry(
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Unique ID
+        username: _username,
+        mealDescription: _mealController.text,
+        timestamp: DateTime.now().toIso8601String(), // Automatic timestamp
+      );
+      setState(() {
+        _trackedMeals.add(newEntry); // Add new entry to the list
+        _trackedMeals.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest first
+      });
+      await _persistMealEntries(); // Persist the updated list to SharedPreferences
+      _mealController.clear(); // Clear the input field after saving
+      _showMessage('Meal added: ${_selectedMealType!} - ${newEntry.mealDescription}');
+
+      // Gamification: Award XP for logging a meal
+      await XPTracker.addXP(10);
+      await StreakManager.logActivity('meal'); // Log meal activity for streak
+
+      // Check for mission completion
+      List<MealEntry> allMealEntries = [];
+      final String? entriesJsonString = _prefs.getString('mealEntries');
+      if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+        final List<dynamic> jsonList = jsonDecode(entriesJsonString);
+        allMealEntries = jsonList.map((json) => MealEntry.fromJson(json)).toList();
+      }
+      final today = DateTime.now();
+      final todayFormatted = DateFormat('yyyy-MM-dd').format(today);
+      final mealLogsToday = allMealEntries.where((entry) => DateFormat('yyyy-MM-dd').format(DateTime.parse(entry.timestamp)) == todayFormatted).length;
+
+      final missions = await MissionManager.getMissions();
+      for (int i = 0; i < missions.length; i++) {
+        if (missions[i].contains('Log meals') && mealLogsToday >= int.parse(missions[i].replaceAll(RegExp(r'[^0-9]'), ''))) {
+          await MissionManager.complete(i);
+          await AchievementManager.unlock('Food Journaler'); // Example achievement
+        }
+      }
+    } else {
+      _showMessage('Please enter a meal and select a meal type.');
+    }
+  }
+
+  /// Delete: Removes a meal entry from local storage based on its ID.
+  void _deleteMealEntry(String id) {
+    setState(() {
+      _trackedMeals.removeWhere((entry) => entry.id == id);
+    });
+    _persistMealEntries(); // Persist the updated list
+    _showMessage('Meal entry deleted.');
+  }
+
+  /// Helper to persist the current list of entries to local storage.
+  Future<void> _persistMealEntries() async {
+    try {
+      final List<Map<String, dynamic>> jsonList = _trackedMeals.map((entry) => entry.toJson()).toList();
+      await _prefs.setString('mealEntries', jsonEncode(jsonList));
+    } catch (e) {
+      _showMessage('Error saving meal entries: $e');
+      print('Error saving meal entries: $e'); // For debugging
+    }
+  }
+
+  /// Helper function to show a simple message using a SnackBar.
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(10),
+      ),
+    );
+  }
+
+  // Helper function to get icon based on meal type
+  IconData _getMealTypeIcon(String mealType) {
+    switch (mealType) {
+      case "Breakfast":
+        return Icons.free_breakfast;
+      case "Lunch":
+        return Icons.lunch_dining;
+      case "Dinner":
+        return Icons.dinner_dining;
+      case "Snacks":
+        return Icons.cookie;
+      case "Other":
+        return Icons.more_horiz;
+      default:
+        return Icons.fastfood;
+    }
+  }
+
+  // Function to show a confirmation dialog before deleting a meal
+  void _showDeleteConfirmationDialog(String entryId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text('Delete Meal'),
+          content: const Text('Are you sure you want to delete this meal entry?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.blueGrey)),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Delete'),
+              onPressed: () {
+                _deleteMealEntry(entryId);
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meal Tracker'),
         centerTitle: true,
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.deepPurple,
         elevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
       body: Padding(
@@ -213,7 +386,7 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Current Date & Time: ${DateFormat('MMM dd, Jamboree - hh:mm:ss a').format(_currentDateTime)}',
+                      'Current Date & Time: ${DateFormat('MMM dd,EEEE - hh:mm:ss a').format(_currentDateTime)}',
                       style: const TextStyle(fontSize: 16, color: Colors.deepPurple),
                     ),
                   ),
@@ -246,7 +419,7 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
 
             // Add Meal Button
             ElevatedButton(
-              onPressed: _addMeal,
+              onPressed: _saveMealEntry, // Changed to _saveMealEntry
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueAccent, // Button background color
                 foregroundColor: Colors.white, // Button text color
@@ -289,10 +462,6 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
                       itemCount: _trackedMeals.length,
                       itemBuilder: (context, index) {
                         final mealEntry = _trackedMeals[index];
-                        // Format the timestamp for display
-                        final DateTime entryDateTime = DateTime.parse(mealEntry["timestamp"]!);
-                        final String formattedTimestamp = DateFormat('MMM dd, Jamboree - hh:mm a').format(entryDateTime);
-
                         return Card(
                           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                           elevation: 3,
@@ -303,25 +472,25 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
                             leading: CircleAvatar(
                               backgroundColor: Colors.blueAccent.withAlpha((255 * 0.5).round()),
                               child: Icon(
-                                _getMealTypeIcon(mealEntry["mealType"]!),
+                                _getMealTypeIcon(_selectedMealType ?? 'Other'), // Use _selectedMealType or a default
                                 color: Colors.blueAccent,
                               ),
                             ),
                             title: Text(
-                              mealEntry["meal"]!,
+                              mealEntry.mealDescription, // Access mealDescription from object
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
                               ),
                             ),
                             subtitle: Text(
-                              '${mealEntry["mealType"]} - $formattedTimestamp',
+                              '${_selectedMealType} - ${mealEntry.formattedTimestamp}', // Use formattedTimestamp
                               style: TextStyle(color: Colors.grey[600]),
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.redAccent),
                               onPressed: () {
-                                _showDeleteConfirmationDialog(index);
+                                _showDeleteConfirmationDialog(mealEntry.id); // Pass the entry's ID
                               },
                             ),
                           ),
@@ -332,70 +501,6 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
           ],
         ),
       ),
-    );
-  }
-
-  // Helper function to get icon based on meal type
-  IconData _getMealTypeIcon(String mealType) {
-    switch (mealType) {
-      case "Breakfast":
-        return Icons.free_breakfast;
-      case "Lunch":
-        return Icons.lunch_dining;
-      case "Dinner":
-        return Icons.dinner_dining;
-      case "Snacks":
-        return Icons.cookie;
-      case "Other":
-        return Icons.more_horiz;
-      default:
-        return Icons.fastfood;
-    }
-  }
-
-  // Function to show a confirmation dialog before deleting a meal
-  void _showDeleteConfirmationDialog(int index) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
-          title: const Text('Delete Meal'),
-          content: const Text('Are you sure you want to delete this meal entry?'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel', style: TextStyle(color: Colors.blueGrey)),
-              onPressed: () {
-                Navigator.of(context).pop(); // Dismiss the dialog
-              },
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Delete'),
-              onPressed: () {
-                setState(() {
-                  _trackedMeals.removeAt(index);
-                });
-                Navigator.of(context).pop(); // Dismiss the dialog
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Meal entry deleted.'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }
