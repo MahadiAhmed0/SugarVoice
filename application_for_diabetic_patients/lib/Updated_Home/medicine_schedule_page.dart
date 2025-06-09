@@ -110,11 +110,6 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: <Widget>[
-          Text(
-            'Hello, ${widget.username}!',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
-            textAlign: TextAlign.center,
-          ),
           const SizedBox(height: 20),
           Card(
             elevation: 5,

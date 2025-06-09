@@ -217,19 +217,7 @@ class _MoodTrackerHomePageState extends State<MoodTrackerHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Display hardcoded username
-            Card(
-              elevation: 2,
-              margin: const EdgeInsets.only(bottom: 20),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text(
-                  'Logged in as: $_username',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
+            
 
             // Mood selection dropdown
             DropdownButtonFormField<String>(

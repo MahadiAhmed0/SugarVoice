@@ -296,31 +296,7 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            // Display username
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              margin: const EdgeInsets.only(bottom: 20),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    const Icon(Icons.person, color: Colors.blueAccent, size: 28),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Welcome, $_username!',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueGrey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+           
             const SizedBox(height: 10),
 
             // Meal Type Dropdown

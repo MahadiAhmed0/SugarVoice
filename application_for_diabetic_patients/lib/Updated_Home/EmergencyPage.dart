@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EmergencyPage extends StatefulWidget {
   const EmergencyPage({Key? key}) : super(key: key);
@@ -11,47 +14,71 @@ class EmergencyPage extends StatefulWidget {
 class _EmergencyPageState extends State<EmergencyPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final List<Map<String, String>> _contacts = [];
+  List<Map<String, String>> _contacts = [];
 
-  void _addContact() {
-    final name = _nameController.text;
-    final phone = _phoneController.text;
-    if (name.isNotEmpty && phone.isNotEmpty) {
-      setState(() {
-        _contacts.add({'name': name, 'phone': phone});
-        _nameController.clear();
-        _phoneController.clear();
-      });
+  void _addContact() async {
+  final name = _nameController.text;
+  final phone = _phoneController.text;
+  if (name.isNotEmpty && phone.isNotEmpty) {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Get existing contacts
+    final String? contactsJsonString = prefs.getString('emergencyContacts');
+    List<Map<String, String>> contacts = [];
+    
+    if (contactsJsonString != null && contactsJsonString.isNotEmpty) {
+      final List<dynamic> jsonList = jsonDecode(contactsJsonString);
+      contacts = jsonList.map((json) => {
+        'name': json['name'] as String,
+        'phone': json['phone'] as String
+      }).toList();
     }
+    
+    // Add new contact
+    contacts.add({'name': name, 'phone': phone});
+    
+    // Save back to SharedPreferences
+    await prefs.setString('emergencyContacts', jsonEncode(contacts));
+    
+    setState(() {
+      _contacts.add({'name': name, 'phone': phone});
+      _nameController.clear();
+      _phoneController.clear();
+    });
   }
+}
 
-  Future<bool?> _deleteContact(int index) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Contact'),
-        content: Text('Are you sure you want to delete ${_contacts[index]['name']}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+// Modify the _deleteContact method to update SharedPreferences
+Future<bool?> _deleteContact(int index) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Delete Contact'),
+      content: Text('Are you sure you want to delete ${_contacts[index]['name']}?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
 
-    if (confirmed == true) {
-      setState(() {
-        _contacts.removeAt(index);
-      });
-      return true;
-    }
-    return false;
+  if (confirmed == true) {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('emergencyContacts', jsonEncode(_contacts));
+    setState(() {
+      _contacts.removeAt(index);
+    });
+    return true;
   }
+  return false;
+}
+
 
   Future<void> _callContact(String phoneNumber) async {
     bool? res = await FlutterPhoneDirectCaller.callNumber(phoneNumber);
@@ -68,6 +95,31 @@ class _EmergencyPageState extends State<EmergencyPage> {
     _phoneController.dispose();
     super.dispose();
   }
+
+  @override
+void initState() {
+  super.initState();
+  _loadContacts();
+}
+
+Future<void> _loadContacts() async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? contactsJsonString = prefs.getString('emergencyContacts');
+  
+  if (contactsJsonString != null && contactsJsonString.isNotEmpty) {
+    try {
+      final List<dynamic> jsonList = jsonDecode(contactsJsonString);
+      setState(() {
+        _contacts = jsonList.map((json) => {
+          'name': json['name'] as String,
+          'phone': json['phone'] as String
+        }).toList();
+      });
+    } catch (e) {
+      print('Error loading contacts: $e');
+    }
+  }
+}
 
   @override
   Widget build(BuildContext context) {

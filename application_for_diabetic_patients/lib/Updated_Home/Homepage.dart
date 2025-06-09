@@ -4,6 +4,7 @@ import 'package:application_for_diabetic_patients/Updated_Home/EmergencyPage.dar
 import 'package:application_for_diabetic_patients/Utils/gemini_service.dart';
 import 'package:application_for_diabetic_patients/Utils/speech_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
 import 'package:intl/intl.dart'; // Required for date formatting
@@ -390,9 +391,14 @@ class _HomePageState extends State<HomePage> {
     await flutterTts.setSpeechRate(0.5);
   }
 
-  Future<void> _speak(String text) async {
-    await flutterTts.speak(text);
-  }
+  Future<void> _speak(String text, {VoidCallback? onComplete}) async {
+  await flutterTts.speak(text);
+  flutterTts.setCompletionHandler(() {
+    if (onComplete != null) {
+      onComplete();
+    }
+  });
+}
 
   Future<void> _speakDailyGreeting() async {
     final prefs = await SharedPreferences.getInstance();
@@ -461,81 +467,174 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
-    final recognizedWords = result.recognizedWords.toLowerCase();
+  final recognizedWords = result.recognizedWords.toLowerCase();
+  setState(() {
+    _wordsSpoken = recognizedWords;
+    _confidenceLevel = _speechService.getConfidenceLevel(result);
+  });
+
+  // Check for wake word if we're not already in Medico mode
+  if (!_isListeningForMedico &&
+      (recognizedWords.contains('medico') ||
+          recognizedWords.contains('medical') ||
+          recognizedWords.contains('mediko'))) {
     setState(() {
-      _wordsSpoken = recognizedWords;
-      _confidenceLevel = _speechService.getConfidenceLevel(result);
+      _isListeningForMedico = true;
+      _geminiResponse = "I'm listening for your health question...";
     });
-
-    // Check for wake word if we're not already in Medico mode
-    if (!_isListeningForMedico &&
-        (recognizedWords.contains('medico') ||
-            recognizedWords.contains('medical') ||
-            recognizedWords.contains('mediko'))) {
-      setState(() {
-        _isListeningForMedico = true;
-        _geminiResponse = "I'm listening for your health question...";
-      });
-      return;
-    }
-
-    // If we're in Medico mode, process the query when speech stops
-    if (_isListeningForMedico && !_speechService.speechToText.isListening) {
-      _handleGeminiQuery(recognizedWords);
-      setState(() {
-        _isListeningForMedico = false;
-      });
-      return;
-    }
-
-    // Only process commands if the speech has sufficient confidence and we're not in Medico mode
-    if (_confidenceLevel > 0.7 && !_isListeningForMedico) {
-      if (recognizedWords.contains('glucose') || recognizedWords.contains('sugar')) {
-        _handleGlucoseCommand(recognizedWords);
-      } else if (recognizedWords.contains('mood') || recognizedWords.contains('feeling')) {
-        _handleMoodCommand(recognizedWords);
-      } else if (recognizedWords.contains('meal') || recognizedWords.contains('food') || recognizedWords.contains('ate')) {
-        _handleMealCommand(recognizedWords);
-      }
-    }
-
-    // Reset the clear timer
-    _speechClearTimer?.cancel();
-    _speechClearTimer = Timer(const Duration(seconds: 2), () {
-      if (!_speechService.speechToText.isListening && !_isListeningForMedico) {
-        setState(() {
-          _wordsSpoken = "";
-          _confidenceLevel = 0;
-          _geminiResponse = ""; // Clear Gemini response if not in medico mode
-        });
-      }
-    });
+    return;
   }
 
-  void _handleGeminiQuery(String recognizedWords) async {
-    // Extract the query after the wake word
-    String query = recognizedWords;
-    if (recognizedWords.contains('medico')) {
-      query = recognizedWords.split('medico').last.trim();
-    } else if (recognizedWords.contains('medical')) {
-      query = recognizedWords.split('medical').last.trim();
-    } else if (recognizedWords.contains('mediko')) {
-      query = recognizedWords.split('mediko').last.trim();
-    }
+  // If we're in Medico mode, process the query when speech stops
+  if (_isListeningForMedico && !_speechService.speechToText.isListening) {
+    _handleGeminiQuery(recognizedWords);
+    setState(() {
+      _isListeningForMedico = false;
+    });
+    return;
+  }
 
-    if (query.isEmpty) {
+  // Only process commands if the speech has sufficient confidence and we're not in Medico mode
+  if (_confidenceLevel > 0.7 && !_isListeningForMedico) {
+    if (recognizedWords.contains('call')) {
+      _handleCallCommand(recognizedWords);
+    } else if (recognizedWords.contains('glucose') || recognizedWords.contains('sugar')) {
+      _handleGlucoseCommand(recognizedWords);
+    } else if (recognizedWords.contains('mood') || recognizedWords.contains('feeling')) {
+      _handleMoodCommand(recognizedWords);
+    } else if (recognizedWords.contains('meal') || recognizedWords.contains('food') || recognizedWords.contains('ate')) {
+      _handleMealCommand(recognizedWords);
+    }
+  }
+
+  // Reset the clear timer
+  _speechClearTimer?.cancel();
+  _speechClearTimer = Timer(const Duration(seconds: 2), () {
+    if (!_speechService.speechToText.isListening && !_isListeningForMedico) {
       setState(() {
-        _geminiResponse = "I'm listening for your health question...";
+        _wordsSpoken = "";
+        _confidenceLevel = 0;
+        _geminiResponse = ""; // Clear Gemini response if not in medico mode
       });
-      return;
     }
+  });
+}
 
-    // Get response from Gemini
+  void _handleCallCommand(String recognizedWords) async {
+  // Extract the name from the command (e.g., "call john" -> "john")
+  String name = recognizedWords.replaceAll('call', '').trim();
+  
+  if (name.isEmpty) {
+    setState(() {
+      _geminiResponse = "I didn't hear a name. Please say something like 'call John'";
+    });
+    return;
+  }
+
+  // Load emergency contacts from SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+  final String? contactsJsonString = prefs.getString('emergencyContacts');
+  
+  if (contactsJsonString == null || contactsJsonString.isEmpty) {
+    setState(() {
+      _geminiResponse = "No emergency contacts found. Please add contacts first.";
+    });
+    return;
+  }
+
+  try {
+    final List<dynamic> jsonList = jsonDecode(contactsJsonString);
+    List<Map<String, String>> contacts = jsonList.map((json) => {
+      'name': json['name'] as String,
+      'phone': json['phone'] as String
+    }).toList();
+
+    // Find contacts that match the spoken name (case insensitive)
+    List<Map<String, String>> matchingContacts = contacts.where((contact) => 
+      contact['name']!.toLowerCase().contains(name.toLowerCase())
+    ).toList();
+
+    if (matchingContacts.isEmpty) {
+      setState(() {
+        _geminiResponse = "No contact found with name '$name'";
+      });
+    } else if (matchingContacts.length == 1) {
+      // If exactly one match, call that contact
+      setState(() {
+        _geminiResponse = "Calling ${matchingContacts[0]['name']}";
+      });
+      _callContact(matchingContacts[0]['phone']!);
+    } else {
+      // If multiple matches, list them
+      setState(() {
+        _geminiResponse = "Multiple contacts found: ${matchingContacts.map((c) => c['name']).join(', ')}. Please be more specific.";
+      });
+    }
+  } catch (e) {
+    setState(() {
+      _geminiResponse = "Error accessing contacts. Please try again.";
+    });
+  }
+}
+
+Future<void> _callContact(String phoneNumber) async {
+  bool? res = await FlutterPhoneDirectCaller.callNumber(phoneNumber);
+  if (res != true) {
+    setState(() {
+      _geminiResponse = "Could not place call to $phoneNumber";
+    });
+  }
+}
+
+  void _handleGeminiQuery(String recognizedWords) async {
+  // Extract the query after the wake word
+  String query = recognizedWords;
+  if (recognizedWords.contains('medico')) {
+    query = recognizedWords.split('medico').last.trim();
+  } else if (recognizedWords.contains('medical')) {
+    query = recognizedWords.split('medical').last.trim();
+  } else if (recognizedWords.contains('mediko')) {
+    query = recognizedWords.split('mediko').last.trim();
+  }
+
+  if (query.isEmpty) {
+    final message = "I'm listening for your health question...";
+    setState(() {
+      _geminiResponse = message;
+    });
+    await _speak(message);
+    return;
+  }
+
+  // Show listening state
+  setState(() {
+    _geminiResponse = "Processing your health question...";
+  });
+
+   try {
     final response = await _geminiService.getSingleHealthResponse(query);
     setState(() {
       _geminiResponse = response;
     });
+    
+    // Speak the response and clear it when done
+    await _speak(response, onComplete: () {
+      setState(() {
+        _geminiResponse = "";
+      });
+    });
+  } catch (e) {
+    final errorMessage = "Sorry, I encountered an error processing your request.";
+    setState(() {
+      _geminiResponse = errorMessage;
+    });
+    await _speak(errorMessage, onComplete: () {
+      setState(() {
+        _geminiResponse = "";
+      });
+    });
   }
+}
 
   void _handleGlucoseCommand(String recognizedWords) async {
     String glucoseValue = recognizedWords.replaceAll(RegExp(r'[^0-9]'), '');

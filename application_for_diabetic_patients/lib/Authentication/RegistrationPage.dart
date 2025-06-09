@@ -159,7 +159,7 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePage()),
+        MaterialPageRoute(builder: (context) => HomePageApp()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
