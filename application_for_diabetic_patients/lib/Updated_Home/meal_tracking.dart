@@ -4,6 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
 
+// Import gamification managers
+import 'package:application_for_diabetic_patients/Updated_Home/achievement_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/mission_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/streak_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/xp_tracker.dart';
+
 // --- MealEntry Model ---
 /// Represents a single meal entry.
 class MealEntry {
@@ -18,7 +24,6 @@ class MealEntry {
     required this.timestamp,
     required this.username,
   });
-
   /// Factory constructor to create a [MealEntry] from a JSON map.
   factory MealEntry.fromJson(Map<String, dynamic> json) {
     return MealEntry(
@@ -42,7 +47,7 @@ class MealEntry {
   /// Returns a human-readable formatted timestamp.
   String get formattedTimestamp {
     final dateTime = DateTime.parse(timestamp);
-    return DateFormat('MMM dd, yyyy - hh:mm a').format(dateTime);
+    return DateFormat('MMM dd,EEEE - hh:mm a').format(dateTime);
   }
 }
 // --- End MealEntry Model ---
@@ -142,7 +147,7 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
   }
 
   /// Create: Saves a new meal entry to local storage.
-  void _saveMealEntry() {
+  void _saveMealEntry() async {
     if (_mealController.text.isNotEmpty && _selectedMealType != null) {
       final newEntry = MealEntry(
         id: DateTime.now().millisecondsSinceEpoch.toString(), // Unique ID
@@ -154,9 +159,32 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
         _trackedMeals.add(newEntry); // Add new entry to the list
         _trackedMeals.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest first
       });
-      _persistMealEntries(); // Persist the updated list to SharedPreferences
+      await _persistMealEntries(); // Persist the updated list to SharedPreferences
       _mealController.clear(); // Clear the input field after saving
       _showMessage('Meal added: ${_selectedMealType!} - ${newEntry.mealDescription}');
+
+      // Gamification: Award XP for logging a meal
+      await XPTracker.addXP(10);
+      await StreakManager.logActivity('meal'); // Log meal activity for streak
+
+      // Check for mission completion
+      List<MealEntry> allMealEntries = [];
+      final String? entriesJsonString = _prefs.getString('mealEntries');
+      if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+        final List<dynamic> jsonList = jsonDecode(entriesJsonString);
+        allMealEntries = jsonList.map((json) => MealEntry.fromJson(json)).toList();
+      }
+      final today = DateTime.now();
+      final todayFormatted = DateFormat('yyyy-MM-dd').format(today);
+      final mealLogsToday = allMealEntries.where((entry) => DateFormat('yyyy-MM-dd').format(DateTime.parse(entry.timestamp)) == todayFormatted).length;
+
+      final missions = await MissionManager.getMissions();
+      for (int i = 0; i < missions.length; i++) {
+        if (missions[i].contains('Log meals') && mealLogsToday >= int.parse(missions[i].replaceAll(RegExp(r'[^0-9]'), ''))) {
+          await MissionManager.complete(i);
+          await AchievementManager.unlock('Food Journaler'); // Example achievement
+        }
+      }
     } else {
       _showMessage('Please enter a meal and select a meal type.');
     }
@@ -358,7 +386,7 @@ class _MealTrackerHomePageState extends State<MealTrackerHomePage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Current Date & Time: ${DateFormat('MMM dd, yyyy - hh:mm:ss a').format(_currentDateTime)}',
+                      'Current Date & Time: ${DateFormat('MMM dd,EEEE - hh:mm:ss a').format(_currentDateTime)}',
                       style: const TextStyle(fontSize: 16, color: Colors.deepPurple),
                     ),
                   ),

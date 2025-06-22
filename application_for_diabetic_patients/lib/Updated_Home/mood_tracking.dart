@@ -3,6 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
 
+// Import gamification managers
+import 'package:application_for_diabetic_patients/Updated_Home/achievement_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/mission_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/streak_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/xp_tracker.dart';
+
 // --- MoodEntry Model ---
 class MoodEntry {
   final String id;
@@ -16,7 +22,6 @@ class MoodEntry {
     required this.mood,
     required this.timestamp,
   });
-
   /// Factory constructor to create a [MoodEntry] from a JSON map.
   factory MoodEntry.fromJson(Map<String, dynamic> json) {
     return MoodEntry(
@@ -86,7 +91,6 @@ class _MoodTrackerHomePageState extends State<MoodTrackerHomePage> {
     'Tired',
     'Energetic'
   ];
-
   @override
   void initState() {
     super.initState();
@@ -120,7 +124,7 @@ class _MoodTrackerHomePageState extends State<MoodTrackerHomePage> {
   }
 
   /// Create: Adds a new mood entry to local storage.
-  void _addMoodEntry() {
+  void _addMoodEntry() async {
     if (_selectedMood == null || _selectedMood!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select a mood.')),
@@ -138,8 +142,31 @@ class _MoodTrackerHomePageState extends State<MoodTrackerHomePage> {
       _moodEntries.insert(0, newEntry); // Add to the beginning
       _selectedMood = null; // Reset selected mood
     });
-    _persistMoodEntries(); // Persist the updated list
+    await _persistMoodEntries(); // Persist the updated list
     _showMessage('Mood entry added successfully!');
+
+    // Gamification: Award XP for logging mood
+    await XPTracker.addXP(5);
+    await StreakManager.logActivity('mood'); // Log mood activity for streak
+
+    // Check for mission completion
+    List<MoodEntry> allMoodEntries = [];
+    final String? entriesJsonString = _prefs.getString('moodEntries');
+    if (entriesJsonString != null && entriesJsonString.isNotEmpty) {
+      final List<dynamic> jsonList = jsonDecode(entriesJsonString);
+      allMoodEntries = jsonList.map((json) => MoodEntry.fromJson(json)).toList();
+    }
+    final today = DateTime.now();
+    final todayFormatted = DateFormat('yyyy-MM-dd').format(today);
+    final moodLogsToday = allMoodEntries.where((entry) => DateFormat('yyyy-MM-dd').format(DateTime.parse(entry.timestamp)) == todayFormatted).length;
+
+    final missions = await MissionManager.getMissions();
+    for (int i = 0; i < missions.length; i++) {
+      if (missions[i].contains('Track mood') && moodLogsToday >= int.parse(missions[i].replaceAll(RegExp(r'[^0-9]'), ''))) {
+        await MissionManager.complete(i);
+        await AchievementManager.unlock('Mood Tracker'); // Example achievement
+      }
+    }
   }
 
   /// Delete: Removes a mood entry from local storage based on its ID.

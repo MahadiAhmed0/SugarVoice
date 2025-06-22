@@ -3,35 +3,49 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; // Required for JSON encoding/decoding
 import 'package:intl/intl.dart'; // Required for date formatting
 
+// Import gamification managers
+import 'package:application_for_diabetic_patients/Updated_Home/achievement_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/mission_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/streak_manager.dart';
+import 'package:application_for_diabetic_patients/Updated_Home/xp_tracker.dart';
+
 // --- JournalEntry Model ---
 /// Represents a single journal entry.
 /// Includes the actual thought, a timestamp, and a unique ID for deletion.
 class JournalEntry {
-  final String thought;
+  final String id; // Added missing 'id' for consistency and deletion
+  final String username; // Added missing 'username'
+  final String title; // Added missing 'title'
+  final String content; // Changed 'thought' to 'content' for consistency
   final String timestamp; // Stored as ISO 8601 string
-  final String id; // Unique ID for each entry, useful for deletion
+
 
   JournalEntry({
-    required this.thought,
+    required this.id,
+    required this.username,
+    required this.title,
+    required this.content,
     required this.timestamp,
-    String? id, // Make id nullable for initial creation
-  }) : id = id ?? DateTime.now().toIso8601String(); // Generate ID if not provided
-
+  });
   /// Factory constructor to create a [JournalEntry] from a JSON map.
   factory JournalEntry.fromJson(Map<String, dynamic> json) {
     return JournalEntry(
-      thought: json['thought'] as String,
+      id: json['id'] as String, // Parse id
+      username: json['username'] as String, // Parse username
+      title: json['title'] as String, // Parse title
+      content: json['content'] as String,
       timestamp: json['timestamp'] as String,
-      id: json['id'] as String,
     );
   }
 
   /// Converts a [JournalEntry] object to a JSON map.
   Map<String, dynamic> toJson() {
     return {
-      'thought': thought,
+      'id': id, // Include id in toJson
+      'username': username, // Include username
+      'title': title, // Include title
+      'content': content,
       'timestamp': timestamp,
-      'id': id,
     };
   }
 
@@ -56,6 +70,7 @@ class DailyJournalApp extends StatelessWidget {
         primarySwatch: Colors.deepPurple, // A nice purple theme
         visualDensity: VisualDensity.adaptivePlatformDensity,
         // fontFamily: 'Inter', // Keeping the 'Inter' font - ensure you have this font loaded if uncommenting
+
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.deepPurple,
           foregroundColor: Colors.white,
@@ -102,7 +117,6 @@ class DailyJournalApp extends StatelessWidget {
 /// The main screen for entering and viewing journal entries.
 class JournalEntryScreen extends StatefulWidget {
   const JournalEntryScreen({super.key});
-
   @override
   State<JournalEntryScreen> createState() => _JournalEntryScreenState();
 }
@@ -110,6 +124,7 @@ class JournalEntryScreen extends StatefulWidget {
 class _JournalEntryScreenState extends State<JournalEntryScreen> {
   final TextEditingController _thoughtController = TextEditingController();
   final _formKey = GlobalKey<FormState>(); // Key for form validation
+  final String _username = "Default User"; // Added username constant
 
   List<JournalEntry> _journalEntries = []; // List to store all journal entries
   late SharedPreferences _prefs; // Declare SharedPreferences instance
@@ -153,21 +168,26 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
   }
 
   /// Creates: Saves a new journal entry to local storage.
-  void _saveJournalEntry() {
+  void _saveJournalEntry() async {
     if (_formKey.currentState!.validate()) {
       final newEntry = JournalEntry(
-        thought: _thoughtController.text,
+        id: DateTime.now().toIso8601String(), // Generate ID
+        username: _username, // Use the username constant
+        title: 'Daily Thought', // Default title for simplicity
+        content: _thoughtController.text,
         timestamp: DateTime.now().toIso8601String(), // Automatic timestamp
       );
-
       setState(() {
         _journalEntries.add(newEntry); // Add new entry to the list
         _journalEntries.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Sort by latest first
       });
-
-      _persistJournalEntries(); // Persist the updated list to SharedPreferences
+      await _persistJournalEntries(); // Persist the updated list to SharedPreferences
       _thoughtController.clear(); // Clear the input field after saving
       _showMessage('Your thought has been saved!');
+
+      // Gamification: Award XP for logging a journal entry
+      await XPTracker.addXP(15);
+      await AchievementManager.unlock('Thoughtful Journaler'); // Example achievement
     }
   }
 
@@ -262,7 +282,7 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
             const SizedBox(height: 10),
 
             // Title for the entries list
-            const Text( // This was the line causing error on 264
+            const Text(
               'Your Journal Entries:',
               style: TextStyle(
                 fontSize: 20,
@@ -270,7 +290,7 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
                 color: Colors.deepPurple,
               ),
               textAlign: TextAlign.center,
-            ), // Missing closing parenthesis for Text widget
+            ),
             const Divider(height: 30, thickness: 1, color: Colors.deepPurpleAccent),
 
             // Display Area for All Saved Entries
@@ -309,14 +329,16 @@ class _JournalEntryScreenState extends State<JournalEntryScreen> {
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () => _deleteJournalEntry(entry.id),
+                                      onPressed: () {
+                                        _deleteJournalEntry(entry.id); // Call delete function with entry ID
+                                      },
                                       tooltip: 'Delete Entry',
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  entry.thought,
+                                  entry.content, // Changed from .thought to .content
                                   style: const TextStyle(fontSize: 16, color: Colors.black87),
                                 ),
                               ],
