@@ -298,32 +298,33 @@ class MedicineSchedule {
 /// The main application widget for the Health Dashboard.
 class BanglaHomePageApp extends StatelessWidget {
   const BanglaHomePageApp({super.key});
-  
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Health Dashboard',
       debugShowCheckedModeBanner: false, // Removes the debug banner
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple, // Main theme color
+        primarySwatch: Colors.blue, // Changed to blue from deepPurple
         visualDensity: VisualDensity.adaptivePlatformDensity,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.deepPurple,
+          backgroundColor: Color(0xFF1976D2), // Darker blue
           foregroundColor: Colors.white,
           elevation: 4,
         ),
         cardTheme: CardThemeData(
-          // Using CardThemeData for theme definition
           elevation: 3,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
           ),
+          color: Colors.blue.shade50, // Set the card color to a light blue
         ),
       ),
       home: const HomePage(),
     );
   }
 }
+
 
 /// The HomePage screen displaying recent health records.
 class HomePage extends StatefulWidget {
@@ -337,7 +338,7 @@ class _HomePageState extends State<HomePage> {
   String _geminiResponse = "";
   Timer? _speechClearTimer;
   // Hardcoded username as requested
-  final String _username = "স্বাস্থ্য ব্যবহারকারী";
+  final String _username = "মাহাদী";
   final SpeechService _speechService = SpeechService();
   String _wordsSpoken = "";
   double _confidenceLevel = 0;
@@ -925,23 +926,23 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // Hello Username Section
+          // Hello Username Section - updated to blue
           Card(
             elevation: 4,
             margin: const EdgeInsets.only(bottom: 20),
-            color: Colors.deepPurple.shade100, // Light purple background for the greeting
+            color: Colors.blue.shade50, // Light blue background
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Row(
                 children: [
-                  const Icon(Icons.waving_hand, size: 30, color: Colors.deepPurple),
+                  const Icon(Icons.waving_hand, size: 30, color: Colors.blue),
                   const SizedBox(width: 10),
                   Text(
                     'হ্যালো, $_username!',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.deepPurple,
+                      color: Colors.blue,
                     ),
                   ),
                 ],
@@ -971,14 +972,14 @@ class _HomePageState extends State<HomePage> {
           _recentMoodEntries.isEmpty
               ? _buildNoRecordsMessage('No mood entries in the last 3 days.')
               : ListView.builder(
-                  shrinkWrap: true, // Makes ListView only take up needed space
-                  physics: const NeverScrollableScrollPhysics(), // Disables ListView's own scrolling
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: _recentMoodEntries.length,
                   itemBuilder: (context, index) {
                     final entry = _recentMoodEntries[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                      color: Colors.blue.shade50, // Light blue for mood cards
+                      color: Colors.lightBlue.shade50,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -987,7 +988,7 @@ class _HomePageState extends State<HomePage> {
                             Text(
                               'Mood: ${entry.mood}',
                               style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.lightBlue),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -1170,46 +1171,47 @@ class _HomePageState extends State<HomePage> {
 
   // New Widget: Gamification Summary
   Widget _buildGamificationSummary() {
-    return Card(
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 20),
-      color: Colors.lightGreen.shade100,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Your Progress',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.lightGreen,
+    return  Card(
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            color: Colors.teal.shade50, // Teal background
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'আপনার অগ্রগতি',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal,
+                    ),
+                  ),
+                  const Divider(height: 20, thickness: 1, color: Colors.tealAccent),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildProgressItem(
+                        'অভিজ্ঞতা পয়েন্ট',
+                        _currentXP.toString(),
+                        Icons.star,
+                        Colors.blue, // Changed to blue
+                      ),
+                      _buildProgressItem(
+                        'লেভেল',
+                        _currentLevel.toString(),
+                        Icons.military_tech,
+                        Colors.indigo,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const Divider(height: 20, thickness: 1, color: Colors.lightGreenAccent),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildProgressItem(
-                  'XP',
-                  _currentXP.toString(),
-                  Icons.star,
-                  Colors.amber,
-                ),
-                _buildProgressItem(
-                  'Level',
-                  _currentLevel.toString(),
-                  Icons.military_tech,
-                  Colors.indigo,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+          );
+
   }
 
   // Helper for progress items
@@ -1238,158 +1240,168 @@ class _HomePageState extends State<HomePage> {
   // New Widget: সাপ্তাহিক Missions
   Widget _buildMissions() {
     return Card(
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 20),
-      color: Colors.orange.shade100,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'সাপ্তাহিক Missions',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.orange,
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            color: Colors.lightBlue.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'সাপ্তাহিক মিশনসমূহ',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.lightBlue,
+                    ),
+                  ),
+                  const Divider(height: 20, thickness: 1, color: Colors.lightBlueAccent),
+                  const SizedBox(height: 10),
+                  if (_weeklyMissions.isEmpty)
+                    _buildNoRecordsMessage('কোনো সাপ্তাহিক মিশন উপলব্ধ নেই।'),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _weeklyMissions.length,
+                    itemBuilder: (context, index) {
+                      final mission = _weeklyMissions[index];
+                      final isCompleted = _missionStatus[index] == '1';
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isCompleted ? Icons.check_circle : Icons.circle_outlined,
+                              color: isCompleted ? Colors.green : Colors.grey,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              mission,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: isCompleted ? Colors.green : Colors.black87,
+                                decoration: isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
-            const Divider(height: 20, thickness: 1, color: Colors.orangeAccent),
-            const SizedBox(height: 10),
-            if (_weeklyMissions.isEmpty)
-              _buildNoRecordsMessage('No weekly missions available.'),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _weeklyMissions.length,
-              itemBuilder: (context, index) {
-                final mission = _weeklyMissions[index];
-                final isCompleted = _missionStatus[index] == '1';
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isCompleted ? Icons.check_circle : Icons.circle_outlined,
-                        color: isCompleted ? Colors.green : Colors.grey,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        mission,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: isCompleted ? Colors.green : Colors.black87,
-                          decoration: isCompleted
-                              ? TextDecoration.lineThrough
-                              : TextDecoration.none,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+          );
   }
 
   // New Widget: Streaks
   Widget _buildStreaks() {
     return Card(
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 20),
-      color: Colors.red.shade100,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Streaks',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            color: Colors.blue.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'অবিরত কার্যক্রম',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const Divider(height: 20, thickness: 1, color: Colors.blueAccent),
+                  const SizedBox(height: 10),
+                  _buildStreakItem('গ্লুকোজ লগের ধারাবাহিকতা', _glucoseStreak),
+                  _buildStreakItem('মনের অবস্থার ট্র্যাকিং ধারাবাহিকতা', _moodStreak),
+                  _buildStreakItem('খাবার লগের ধারাবাহিকতা', _mealStreak),
+                ],
               ),
             ),
-            const Divider(height: 20, thickness: 1, color: Colors.redAccent),
-            const SizedBox(height: 10),
-            _buildStreakItem('Glucose Log Streak', _glucoseStreak),
-            _buildStreakItem('Mood Track Streak', _moodStreak),
-            _buildStreakItem('Meal Log Streak', _mealStreak),
-          ],
-        ),
-      ),
-    );
+          );
   }
 
   // Helper for streak items
-  Widget _buildStreakItem(String label, int streak) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Icon(Icons.local_fire_department, color: Colors.red.shade700),
-          const SizedBox(width: 10),
-          Text(
-            '$label: $streak days',
-            style: const TextStyle(fontSize: 16, color: Colors.black87),
-          ),
-        ],
-      ),
-    );
+ Widget _buildStreakItem(String label, int streak) {
+  String _convertToBanglaDigits(int number) {
+    const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return number
+        .toString()
+        .split('')
+        .map((e) => banglaDigits[int.parse(e)])
+        .join();
   }
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0),
+    child: Row(
+      children: [
+        Icon(Icons.local_fire_department, color: Colors.red.shade700),
+        const SizedBox(width: 10),
+        Text(
+          '$label: ${_convertToBanglaDigits(streak)} দিন',
+          style: const TextStyle(fontSize: 16, color: Colors.black87),
+        ),
+      ],
+    ),
+  );
+}
+
 
   // New Widget: Achievements
   Widget _buildAchievements() {
     return Card(
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 20),
-      color: Colors.cyan.shade100,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Achievements',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.cyan,
+            elevation: 4,
+            margin: const EdgeInsets.only(bottom: 20),
+            color: Colors.cyan.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'অর্জনসমূহ',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.cyan,
+                    ),
+                  ),
+                  const Divider(height: 20, thickness: 1, color: Colors.cyanAccent),
+                  const SizedBox(height: 10),
+                  if (_unlockedAchievements.isEmpty)
+                    _buildNoRecordsMessage('এখনো কোনো অর্জন আনলক করা হয়নি।'),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _unlockedAchievements.length,
+                    itemBuilder: (context, index) {
+                      final achievement = _unlockedAchievements[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.emoji_events, color: Colors.amber),
+                            const SizedBox(width: 10),
+                            Text(
+                              achievement,
+                              style: const TextStyle(fontSize: 16, color: Colors.black87),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
-            const Divider(height: 20, thickness: 1, color: Colors.cyanAccent),
-            const SizedBox(height: 10),
-            if (_unlockedAchievements.isEmpty)
-              _buildNoRecordsMessage('No achievements unlocked yet.'),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _unlockedAchievements.length,
-              itemBuilder: (context, index) {
-                final achievement = _unlockedAchievements[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.emoji_events, color: Colors.amber),
-                      const SizedBox(width: 10),
-                      Text(
-                        achievement,
-                        style: const TextStyle(fontSize: 16, color: Colors.black87),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+          );
   }
 
   @override
@@ -1489,63 +1501,63 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Ensure all items are visible
-        backgroundColor: Colors.deepPurple,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.blue, // Changed to blue
+            selectedItemColor: Colors.white,
+            unselectedItemColor: Colors.white70,
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            items: const <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'হোম',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.bloodtype),
+                label: 'গ্লুকোজ',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.book),
+                label: 'নোট',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.restaurant),
+                label: 'খাবার',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.sentiment_satisfied_alt),
+                label: 'অনুভূতি',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.medical_services),
+                label: 'ওষুধ',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.phone),
+                label: 'জরুরি',
+              )
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bloodtype),
-            label: 'Glucose',
+          floatingActionButton: FloatingActionButton(
+            onPressed: _speechService.speechToText.isListening ? _stopListening : _startListening,
+            tooltip: 'Listen',
+            child: Icon(
+              _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
+              color: Colors.white,
+            ),
+            backgroundColor: _isListeningForMedico
+                ? Colors.green
+                : (_speechService.speechToText.isListening
+                    ? Colors.blue // Changed to blue
+                    : Colors.blue), // Changed to blue
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book),
-            label: 'Note',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant),
-            label: 'Meal',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sentiment_satisfied_alt),
-            label: 'Mood',
-          ),
-          BottomNavigationBarItem(
-            // Added Medicine Tracker icon
-            icon: Icon(Icons.medical_services),
-            label: 'Meds',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.phone),
-            label: 'Emerg',
-          )
-        ],
-        
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _speechService.speechToText.isListening ? _stopListening : _startListening,
-        tooltip: 'Listen',
-        child: Icon(
-          _speechService.speechToText.isNotListening ? Icons.mic_off : Icons.mic,
-          color: Colors.white,
-        ),
-        backgroundColor: _isListeningForMedico
-            ? Colors.green
-            : (_speechService.speechToText.isListening
-                ? Colors.deepPurple
-                : Colors.deepPurple),
-      ),
-    );
+      
+      );
+  
   }
 
   // Helper widget to build consistent section titles
-  Widget _buildSectionTitle(String title) {
+ Widget _buildSectionTitle(String title) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1554,10 +1566,10 @@ class _HomePageState extends State<HomePage> {
           style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Colors.deepPurple,
+            color: Colors.blue, // Changed to blue
           ),
         ),
-        const Divider(height: 20, thickness: 1, color: Colors.deepPurpleAccent),
+        const Divider(height: 20, thickness: 1, color: Colors.blueAccent), // Changed to blue
         const SizedBox(height: 10),
       ],
     );

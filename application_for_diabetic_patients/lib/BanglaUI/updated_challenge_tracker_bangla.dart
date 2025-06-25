@@ -6,12 +6,12 @@ class ChallengeTracker {
   static const _completedChallengesKey = 'completed_challenges';
 
   // Example challenges (can be loaded dynamically or defined here)
-  static const List<String> _predefinedChallenges = [
-    'Log glucose 7 days in a row',
-    'Track mood 5 different times in a week',
-    'Log 10 meals in a week',
-    'Take all scheduled medicines for 3 days',
-  ];
+ static const List<String> _predefinedChallenges = [
+  '৭ দিন পরপর গ্লুকোজ লগ করুন',
+  'এক সপ্তাহে ৫ বার মনের অবস্থা ট্র্যাক করুন',
+  'এক সপ্তাহে ১০টি খাবারের লগ রাখুন',
+  '৩ দিন নিয়মিত সব ওষুধ গ্রহণ করুন',
+];
 
   /// Activates a set of challenges.
   /// In a real app, this might involve more complex logic, e.g., daily/weekly challenges.
@@ -64,7 +64,7 @@ class ChallengeTracker {
       await prefs.setStringList(_completedChallengesKey, completedChallenges);
       await prefs.remove('challenge_progress_$challengeName'); // Clear progress
 
-      _speak("চ্যালেঞ্জ সম্পন্ন: $challengeName! দুর্দান্ত কাজ!");
+      _speak("আপনি চ্যালেঞ্জটি সম্পন্ন করেছেন: $challengeName! অসাধারণ কাজ করেছেন!");
     }
   }
 
@@ -81,7 +81,9 @@ class ChallengeTracker {
       (await SharedPreferences.getInstance()).getInt('challenge_progress_$challengeName') ?? 0;
 
   static void _speak(String text) async {
-    final tts = FlutterTts();
-    await tts.speak(text);
-  }
+  final tts = FlutterTts();
+  await tts.setLanguage("bn-BD"); // বাংলা ভাষা সেট করুন
+  await tts.setPitch(1.0);
+  await tts.speak(text);
+}
 }
