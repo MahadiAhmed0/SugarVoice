@@ -1,4 +1,5 @@
 import 'package:application_for_diabetic_patients/Constansts.dart';
+import 'package:application_for_diabetic_patients/Intro/language_selection_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
@@ -10,7 +11,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(); // Initialize Firebase
-  runApp(HomePageApp());
+  runApp(DiabetesApp());
 }
 
 class DiabetesApp extends StatelessWidget {
@@ -19,7 +20,7 @@ class DiabetesApp extends StatelessWidget {
     return MaterialApp(
       title: 'Diabetes App',
       debugShowCheckedModeBanner: false,
-      home: HomePageApp(),
+      home: LanguageSelectionPage(),
     );
   }
 }
