@@ -70,7 +70,7 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
       _nameController.clear();
       _dosageController.clear();
       _frequencyController.clear();
-      _showMessage('Medicine schedule added!');
+      _showMessage('ওষুধের সময়সূচি যোগ করা হয়েছে!');
     }
   }
 
@@ -79,7 +79,7 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
       _scheduledMedicines.removeWhere((schedule) => schedule.id == id);
     });
     _persistScheduledMedicines();
-    _showMessage('Medicine schedule deleted.');
+    _showMessage('ওষুধের সময়সূচি মুছে ফেলা হয়েছে।');
   }
 
   Future<void> _persistScheduledMedicines() async {
@@ -110,11 +110,7 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: <Widget>[
-          Text(
-            'Hello, ${widget.username}!',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
-            textAlign: TextAlign.center,
-          ),
+        
           const SizedBox(height: 20),
           Card(
             elevation: 5,
@@ -129,7 +125,7 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
-                        labelText: 'Medicine Name',
+                        labelText: 'ঔষধের নাম',
                         prefixIcon: Icon(Icons.medical_services),
                       ),
                       validator: (value) {
@@ -143,7 +139,7 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
                     TextFormField(
                       controller: _dosageController,
                       decoration: const InputDecoration(
-                        labelText: 'Dosage (e.g., 5mg, 1 tablet)',
+                        labelText: 'ডোজ (e.g., 5mg, 1 tablet)',
                         prefixIcon: Icon(Icons.numbers),
                       ),
                       validator: (value) {
@@ -157,7 +153,7 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
                     TextFormField(
                       controller: _frequencyController,
                       decoration: const InputDecoration(
-                        labelText: 'Frequency/Instructions (e.g., Once daily, Before meals)',
+                        labelText: 'ফ্রিকোয়েন্সি/Instructions (e.g., Once daily, Before meals)',
                         prefixIcon: Icon(Icons.alarm),
                       ),
                       validator: (value) {
@@ -170,7 +166,7 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _saveMedicineSchedule,
-                      child: const Text('Add Medicine to Schedule'),
+                      child: const Text('ওষুধ সময়সূচিতে যুক্ত করুন'),
                     ),
                   ],
                 ),
@@ -179,20 +175,20 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Your Scheduled Medicines:',
+            'আপনার নির্ধারিত ওষুধসমূহ:',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.deepPurple,
+              color: Colors.blueGrey,
             ),
             textAlign: TextAlign.center,
           ),
-          const Divider(height: 30, thickness: 1, color: Colors.deepPurpleAccent),
+          const Divider(height: 30, thickness: 1, color: Colors.lightBlue),
           Expanded(
             child: _scheduledMedicines.isEmpty
                 ? Center(
                     child: Text(
-                      'No medicines scheduled yet. Add one!',
+                      'এখনো কোনো ওষুধ নির্ধারিত হয়নি।\nএকটি যোগ করুন!',
                       style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                       textAlign: TextAlign.center,
                     ),
@@ -219,25 +215,25 @@ class _MedicineSchedulePageState extends State<MedicineSchedulePage> {
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.deepPurple,
+                                        color: Colors.blue,
                                       ),
                                     ),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete, color: Colors.red),
                                     onPressed: () => _deleteMedicineSchedule(medicine.id),
-                                    tooltip: 'Delete Schedule',
+                                    tooltip: 'সময়সূচি মুছে ফেলুন',
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Dosage: ${medicine.dosage}',
+                                'ডোজ: ${medicine.dosage}',
                                 style: const TextStyle(fontSize: 16, color: Colors.black87),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Instructions: ${medicine.frequency}',
+                                'নির্দেশনা : ${medicine.frequency}',
                                 style: const TextStyle(fontSize: 16, color: Colors.black87),
                               ),
                             ],

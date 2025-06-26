@@ -14,16 +14,16 @@ class MedicineTrackerApp extends StatelessWidget {
       title: 'Medicine Tracker',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
+        primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.deepPurple,
+          backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
           elevation: 4,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple.shade700,
+            backgroundColor: Colors.blue.shade700,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.0),
@@ -46,11 +46,11 @@ class MedicineTrackerApp extends StatelessWidget {
           ),
           filled: true,
           fillColor: Colors.deepPurple.shade50,
-          prefixIconColor: Colors.deepPurple,
-          labelStyle: const TextStyle(color: Colors.deepPurple),
+          prefixIconColor: Colors.blue,
+          labelStyle: const TextStyle(color: Colors.blue),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(color: Colors.deepPurple, width: 2),
+            borderSide: const BorderSide(color: Colors.blue, width: 2),
           ),
         ),
       ),
@@ -91,7 +91,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _selectedIndex == 0 ? 'Medicine Schedule' : 'Medicine Log',
+          _selectedIndex == 0 ? 'ওষুধের সময়সূচি' : 'ওষুধের রেকর্ড',
         ),
         centerTitle: true,
         shape: const RoundedRectangleBorder(
@@ -113,7 +113,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepPurple,
+        selectedItemColor: Colors.blue,
         onTap: _onItemTapped,
       ),
     );

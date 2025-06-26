@@ -47,7 +47,7 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
         });
       }
     } catch (e) {
-      _showMessage('Error loading medicine logs: $e');
+      _showMessage('ঔষধ লগ লোড করতে ত্রুটি: $e');
       print('Error loading medicine logs: $e');
     }
   }
@@ -66,7 +66,7 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
 
       _persistMedicineLogs();
       _medicineNameController.clear();
-      _showMessage('Medicine logged successfully!');
+      _showMessage('ঔষধ সফলভাবে লগ হয়েছে!');
     }
   }
 
@@ -75,7 +75,7 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
       _medicineLogs.removeWhere((log) => log.id == id);
     });
     _persistMedicineLogs();
-    _showMessage('Medicine log deleted.');
+    _showMessage('ঔষধ লগ মুছে ফেলা হয়েছে।');
   }
 
   Future<void> _persistMedicineLogs() async {
@@ -83,7 +83,7 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
       final List<Map<String, dynamic>> jsonList = _medicineLogs.map((log) => log.toJson()).toList();
       await _prefs.setString('medicineLogs', jsonEncode(jsonList));
     } catch (e) {
-      _showMessage('Error saving medicine logs: $e');
+      _showMessage('ঔষধ লগ সংরক্ষণ করতে ত্রুটি: $e');
       print('Error saving medicine logs: $e');
     }
   }
@@ -106,11 +106,7 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: <Widget>[
-          Text(
-            'Hello, ${widget.username}!',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
-            textAlign: TextAlign.center,
-          ),
+         
           const SizedBox(height: 20),
           Card(
             elevation: 5,
@@ -125,13 +121,13 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
                     TextFormField(
                       controller: _medicineNameController,
                       decoration: const InputDecoration(
-                        labelText: 'Medicine Taken',
-                        hintText: 'e.g., Metformin',
+                        labelText: 'ঔষধ নেওয়া',
+                        hintText: 'যেমন: মেটফর্মিন',
                         prefixIcon: Icon(Icons.medication),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter the medicine taken.';
+                          return 'দয়া করে নেওয়া ঔষধের নাম লিখুন।';
                         }
                         return null;
                       },
@@ -139,7 +135,7 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _logMedicineTaken,
-                      child: const Text('Log Medicine Taken'),
+                      child: const Text('ঔষধ লগ করুন'),
                     ),
                   ],
                 ),
@@ -148,20 +144,20 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Your Medicine Log History:',
+            'আপনার ঔষধ লগ ইতিহাস:',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.deepPurple,
+              color: Colors.blueGrey,
             ),
             textAlign: TextAlign.center,
           ),
-          const Divider(height: 30, thickness: 1, color: Colors.deepPurpleAccent),
+          const Divider(height: 30, thickness: 1, color: Colors.lightBlue),
           Expanded(
             child: _medicineLogs.isEmpty
                 ? Center(
                     child: Text(
-                      'No medicines logged yet. Log one!',
+                      'এখনো কোন ঔষধ লগ হয়নি।\nএকটি লগ করুন!',
                       style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                       textAlign: TextAlign.center,
                     ),
@@ -187,19 +183,19 @@ class _MedicineLogPageState extends State<MedicineLogPage> {
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.deepPurple,
+                                      color: Colors.blue,
                                     ),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete, color: Colors.red),
                                     onPressed: () => _deleteMedicineLog(log.id),
-                                    tooltip: 'Delete Log',
+                                    tooltip: 'লগ মুছুন',
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Logged at: ${log.formattedTimestamp}',
+                                'লগ করা হয়েছে: ${log.formattedTimestamp}',
                                 style: const TextStyle(fontSize: 14, color: Colors.black54),
                               ),
                             ],
