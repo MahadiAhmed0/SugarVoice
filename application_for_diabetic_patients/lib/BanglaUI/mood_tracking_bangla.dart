@@ -43,6 +43,8 @@ class MoodEntryBangla {
     final dateTime = DateTime.parse(timestamp);
     return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
   }
+
+  get mealDescription => null;
 }
 
 class MoodTrackerBangla extends StatelessWidget {
@@ -175,15 +177,7 @@ class _MoodTrackerBanglaHomePageState extends State<MoodTrackerBanglaHomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text(
-                  'ব্যবহারকারী: $_username',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-            ),
+            
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(
                 labelText: 'আপনি আজ কেমন বোধ করছেন?',
@@ -205,7 +199,11 @@ class _MoodTrackerBanglaHomePageState extends State<MoodTrackerBanglaHomePage> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _addMoodEntry,
-              child: const Text('মুড এন্ট্রি যোগ করুন'),
+              child: const Text('মুড এন্ট্রি যোগ করুন',
+               style: TextStyle(
+      fontSize: 16,
+      color: Colors.blue,  )
+              ),
             ),
             const SizedBox(height: 30),
             const Text(

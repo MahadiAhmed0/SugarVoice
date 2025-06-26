@@ -12,8 +12,10 @@ class SpeechService {
     _speechEnabled = await _speechToText.initialize();
   }
 
-  Future<void> startListening(void Function(SpeechRecognitionResult result) onResult,
-    {String localeId = 'en/EN'}) async {
+ Future<void> startListening(
+    void Function(SpeechRecognitionResult result) onResult,
+    {String lang = 'en'}) async {
+  String localeId = lang == 'bn' ? 'bn_BD' : 'en_US';
   await _speechToText.listen(onResult: onResult, localeId: localeId);
 }
 

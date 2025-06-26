@@ -19,7 +19,8 @@ dependencies:
   flutter_gemini: ^3.0.0
   speech_to_text: ^7.0.0
   flutter_phone_direct_caller: ^2.2.1
-
+  http: ^0.13.6
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -9,7 +9,7 @@ import 'dart:convert'; // Required for JSON encoding/decoding
 import 'package:intl/intl.dart'; // Required for date formatting
 import 'package:speech_to_text/speech_recognition_result.dart'; // Required for speech recognition
 import 'package:flutter_tts/flutter_tts.dart'; // Import flutter_tts
-
+import 'package:http/http.dart' as http;
 // Import the other tracking pages and their models
 import '/BanglaUI/glucose_input_bangla.dart';
 import '/BanglaUI/journal_entry_bangla.dart';
@@ -22,6 +22,27 @@ import '/BanglaUI/updated_achievement_manager_bangla.dart';
 import '/BanglaUI/updated_mission_manager_bangla.dart';
 import '/BanglaUI/updated_streak_manager_bangla.dart';
 import '/BanglaUI/xp_tracker_bangla.dart';
+
+
+Future<void> sendTextToTTS(String text) async {
+  final uri = Uri.parse("https://sugarvoice-backend.onrender.com/api/tts");
+  final headers = {"Content-Type": "application/json"};
+  final body = jsonEncode({
+    "text": text,
+    "format": "mp3"
+  });
+
+  try {
+    final response = await http.post(uri, headers: headers, body: body);
+    if (response.statusCode == 200) {
+      print("TTS API Success: ${response.body}");
+    } else {
+      print("TTS API Error: ${response.statusCode}, ${response.body}");
+    }
+  } catch (e) {
+    print("TTS API Exception: $e");
+  }
+}
 
 // Re-defining models here for clarity and to ensure consistency with homepage parsing.
 // Ideally, these would be in a separate `models.dart` file for reusability.
@@ -302,13 +323,13 @@ class BanglaHomePageApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Health Dashboard',
+      title: 'স্বাস্থ্য ড্যাশবোর্ড',
       debugShowCheckedModeBanner: false, // Removes the debug banner
       theme: ThemeData(
         primarySwatch: Colors.blue, // Changed to blue from deepPurple
         visualDensity: VisualDensity.adaptivePlatformDensity,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1976D2), // Darker blue
+          backgroundColor: Colors.blue, // Darker blue
           foregroundColor: Colors.white,
           elevation: 4,
         ),
@@ -437,7 +458,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _startListening() async {
-    await _speechService.startListening(_onSpeechResult, localeId: 'en_US'); // Change locale as needed
+    await _speechService.startListening(_onSpeechResult, lang: 'bn'); // Change locale as needed
     setState(() {
       _confidenceLevel = 0;
       _geminiResponse = "";
@@ -471,7 +492,7 @@ class _HomePageState extends State<HomePage> {
     if (!_isListeningForMedico &&
         (recognizedWords.contains('medico') ||
             recognizedWords.contains('medical') ||
-            recognizedWords.contains('mediko'))) {
+            recognizedWords.contains('mediko') || recognizedWords.contains('মেডিকো') )) {
       setState(() {
         _isListeningForMedico = true;
         _geminiResponse = "আমি আপনার স্বাস্থ্য প্রশ্ন শোনার অপেক্ষা করছি...";
@@ -490,11 +511,11 @@ class _HomePageState extends State<HomePage> {
 
     // Only process commands if the speech has sufficient confidence and we're not in Medico mode
     if (_confidenceLevel > 0.7 && !_isListeningForMedico) {
-      if (recognizedWords.contains('glucose') || recognizedWords.contains('sugar')) {
+      if (recognizedWords.contains('গ্লুকোজ') || recognizedWords.contains('চিনি')) {
         _handleGlucoseCommand(recognizedWords);
-      } else if (recognizedWords.contains('mood') || recognizedWords.contains('feeling')) {
+      } else if (recognizedWords.contains('মুড') || recognizedWords.contains('মেজাজ')) {
         _handleMoodCommand(recognizedWords);
-      } else if (recognizedWords.contains('meal') || recognizedWords.contains('food') || recognizedWords.contains('ate')) {
+      } else if (recognizedWords.contains('খাবার') || recognizedWords.contains('খেয়েছি') || recognizedWords.contains('খাদ্য')) {
         _handleMealCommand(recognizedWords);
       }
     }
@@ -520,7 +541,7 @@ class _HomePageState extends State<HomePage> {
     } else if (recognizedWords.contains('medical')) {
       query = recognizedWords.split('medical').last.trim();
     } else if (recognizedWords.contains('mediko')) {
-      query = recognizedWords.split('mediko').last.trim();
+      query = recognizedWords.split('মেডিকো').last.trim();
     }
 
     if (query.isEmpty) {
@@ -535,6 +556,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _geminiResponse = response;
     });
+    await sendTextToTTS(response);
   }
 
   void _handleGlucoseCommand(String recognizedWords) async {
@@ -567,12 +589,21 @@ class _HomePageState extends State<HomePage> {
     final todayFormatted = DateFormat('yyyy-MM-dd').format(today);
     final glucoseLogsToday = allGlucoseEntries.where((entry) => DateFormat('yyyy-MM-dd').format(DateTime.parse(entry.timestamp)) == todayFormatted).length;
 
-    for (int i = 0; i < _weeklyMissions.length; i++) {
-      if (_weeklyMissions[i].contains('Log glucose') && glucoseLogsToday >= int.parse(_weeklyMissions[i].replaceAll(RegExp(r'[^0-9]'), ''))) {
-        await MissionManager.complete(i);
-        await AchievementManager.unlock('Glucose Logger'); // Example achievement
-      }
-    }
+    int parseBanglaNumber(String input) {
+  const banglaDigits = {
+    '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+    '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+  };
+  String converted = input.split('').map((e) => banglaDigits[e] ?? e).join();
+  return int.parse(converted.replaceAll(RegExp(r'[^0-9]'), ''));
+}
+
+for (int i = 0; i < _weeklyMissions.length; i++) {
+  if (_weeklyMissions[i].contains('গ্লুকোজ লগ') && glucoseLogsToday >= parseBanglaNumber(_weeklyMissions[i])) {
+    await MissionManager.complete(i);
+    await AchievementManager.unlock('গ্লুকোজ লগার'); // উদাহরণ অর্জন
+  }
+}
 
     setState(() {
       _geminiResponse = "রেকর্ড করা গ্লুকোজ: $glucoseValue mg/dL";
@@ -639,12 +670,21 @@ class _HomePageState extends State<HomePage> {
       final todayFormatted = DateFormat('yyyy-MM-dd').format(today);
       final moodLogsToday = allMoodEntries.where((entry) => DateFormat('yyyy-MM-dd').format(DateTime.parse(entry.timestamp)) == todayFormatted).length;
 
-      for (int i = 0; i < _weeklyMissions.length; i++) {
-        if (_weeklyMissions[i].contains('Track mood') && moodLogsToday >= int.parse(_weeklyMissions[i].replaceAll(RegExp(r'[^0-9]'), ''))) {
-          await MissionManager.complete(i);
-          await AchievementManager.unlock('Mood Tracker'); // Example achievement
-        }
-      }
+      int parseBanglaNumber(String input) {
+  const banglaDigits = {
+    '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+    '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+  };
+  String converted = input.split('').map((e) => banglaDigits[e] ?? e).join();
+  return int.parse(converted.replaceAll(RegExp(r'[^0-9]'), ''));
+}
+
+for (int i = 0; i < _weeklyMissions.length; i++) {
+  if (_weeklyMissions[i].contains('মনের অবস্থা ট্র্যাক') && moodLogsToday >= parseBanglaNumber(_weeklyMissions[i])) {
+    await MissionManager.complete(i);
+    await AchievementManager.unlock('মুড ট্র্যাকার'); // উদাহরণ অর্জন
+  }
+}
 
       setState(() {
         _geminiResponse = "রেকর্ড করা মেজাজ: $detectedMood";
@@ -705,12 +745,21 @@ class _HomePageState extends State<HomePage> {
       final todayFormatted = DateFormat('yyyy-MM-dd').format(today);
       final mealLogsToday = allMealEntries.where((entry) => DateFormat('yyyy-MM-dd').format(DateTime.parse(entry.timestamp)) == todayFormatted).length;
 
-      for (int i = 0; i < _weeklyMissions.length; i++) {
-        if (_weeklyMissions[i].contains('Log meals') && mealLogsToday >= int.parse(_weeklyMissions[i].replaceAll(RegExp(r'[^0-9]'), ''))) {
-          await MissionManager.complete(i);
-          await AchievementManager.unlock('Food Journaler'); // Example achievement
-        }
-      }
+      int parseBanglaNumber(String input) {
+  const banglaDigits = {
+    '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+    '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+  };
+  String converted = input.split('').map((e) => banglaDigits[e] ?? e).join();
+  return int.parse(converted.replaceAll(RegExp(r'[^0-9]'), ''));
+}
+
+for (int i = 0; i < _weeklyMissions.length; i++) {
+  if (_weeklyMissions[i].contains('খাবার লগ') && mealLogsToday >= parseBanglaNumber(_weeklyMissions[i])) {
+    await MissionManager.complete(i);
+    await AchievementManager.unlock('ফুড জার্নেলার'); // উদাহরণ অর্জন
+  }
+}
 
       setState(() {
         _geminiResponse = "রেকর্ড করা খাবার: $mealDescription";
@@ -968,9 +1017,9 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 20),
 
           // Mood Entries Section
-          _buildSectionTitle('Recent Moods'),
+          _buildSectionTitle('সাম্প্রতিক মনের অবস্থা'),
           _recentMoodEntries.isEmpty
-              ? _buildNoRecordsMessage('No mood entries in the last 3 days.')
+              ? _buildNoRecordsMessage('গত ৩ দিনে কোনো অনুভূতির রেকর্ড নেই।')
               : ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1004,9 +1053,9 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 20),
 
           // Meal Entries Section
-          _buildSectionTitle('Recent Meals'),
+          _buildSectionTitle('সাম্প্রতিক খাবারের তালিকা'),
           _recentMealEntries.isEmpty
-              ? _buildNoRecordsMessage('No meal entries in the last 3 days.')
+              ? _buildNoRecordsMessage('গত ৩ দিনে কোনো খাবারের এন্ট্রি নেই।')
               : ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1022,13 +1071,13 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Meal: ${entry.mealDescription}',
+                              'খাবার: ${entry.mealDescription}',
                               style: const TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Recorded: ${entry.formattedTimestamp}',
+                              'সংরক্ষিত: ${entry.formattedTimestamp}',
                               style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                             ),
                           ],
@@ -1040,50 +1089,50 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 20),
 
           // Glucose Entries Section
-          _buildSectionTitle('Recent Glucose Readings'),
-          _recentGlucoseEntries.isEmpty
-              ? _buildNoRecordsMessage('No glucose entries in the last 3 days.')
-              : ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _recentGlucoseEntries.length,
-                  itemBuilder: (context, index) {
-                    final entry = _recentGlucoseEntries[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                      color: Colors.blue.shade50, // Light blue for glucose cards
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Glucose: ${entry.glucoseValue} mg/dL',
-                              style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade800),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Recorded: ${entry.formattedTimestamp}',
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  fontStyle: FontStyle.italic,
-                                  color: Colors.black54),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+          _buildSectionTitle('সাম্প্রতিক গ্লুকোজ পরিমাপ'),
+_recentGlucoseEntries.isEmpty
+    ? _buildNoRecordsMessage('গত ৩ দিনে গ্লুকোজ পরিমাপ নেই।')
+    : ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _recentGlucoseEntries.length,
+        itemBuilder: (context, index) {
+          final entry = _recentGlucoseEntries[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            color: Colors.blue.shade50, // Light blue for glucose cards
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'গ্লুকোজ: ${entry.glucoseValue} mg/dL',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'রেকর্ড করা হয়েছে: ${entry.formattedTimestamp}',
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
           const SizedBox(height: 20),
 
           // --- Medicine Reminder Section ---
-          _buildSectionTitle('Upcoming Medicine Reminders'),
+          _buildSectionTitle('আসন্ন ওষুধ গ্রহণের স্মরণিকার সময়সূচি'),
           _upcomingMedicineSchedules.isEmpty
-              ? _buildNoRecordsMessage('No upcoming medicine reminders.')
+              ? _buildNoRecordsMessage('কোনো আসন্ন ওষুধের রিমাইন্ডার নেই।')
               : ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1103,7 +1152,7 @@ class _HomePageState extends State<HomePage> {
                               style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.purple),
+                                  color: Color.fromARGB(255, 39, 60, 176)),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -1123,9 +1172,9 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 20),
 
           // --- Recent Medicine Logs Section ---
-          _buildSectionTitle('Recent Medicine Logs'),
+          _buildSectionTitle('সাম্প্রতিক ওষুধের লগসমূহ'),
           _recentMedicineLogs.isEmpty
-              ? _buildNoRecordsMessage('No recent medicine logs.')
+              ? _buildNoRecordsMessage('কোনো সাম্প্রতিক ওষুধের লগ নেই।')
               : ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1145,7 +1194,7 @@ class _HomePageState extends State<HomePage> {
                               style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.purple),
+                                  color: Color.fromARGB(255, 48, 39, 176)),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -1170,47 +1219,52 @@ class _HomePageState extends State<HomePage> {
   }
 
   // New Widget: Gamification Summary
-  Widget _buildGamificationSummary() {
-    return  Card(
-            elevation: 4,
-            margin: const EdgeInsets.only(bottom: 20),
-            color: Colors.teal.shade50, // Teal background
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'আপনার অগ্রগতি',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
-                    ),
-                  ),
-                  const Divider(height: 20, thickness: 1, color: Colors.tealAccent),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildProgressItem(
-                        'অভিজ্ঞতা পয়েন্ট',
-                        _currentXP.toString(),
-                        Icons.star,
-                        Colors.blue, // Changed to blue
-                      ),
-                      _buildProgressItem(
-                        'লেভেল',
-                        _currentLevel.toString(),
-                        Icons.military_tech,
-                        Colors.indigo,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+  Widget _buildGamificationSummary() {String convertToBanglaNumber(int number) {
+  const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  return number.toString().split('').map((digit) {
+    return banglaDigits[int.parse(digit)];
+  }).join('');
+}
+   return Card(
+  elevation: 4,
+  margin: const EdgeInsets.only(bottom: 20),
+  color: Colors.teal.shade50, // Teal background
+  child: Padding(
+    padding: const EdgeInsets.all(20.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'আপনার অগ্রগতি',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.teal,
+          ),
+        ),
+        const Divider(height: 20, thickness: 1, color: Colors.tealAccent),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildProgressItem(
+              'অভিজ্ঞতা পয়েন্ট',
+              convertToBanglaNumber(_currentXP), // Convert to Bangla number
+              Icons.star,
+              Colors.blue, // Changed to blue
             ),
-          );
+            _buildProgressItem(
+              'লেভেল',
+              convertToBanglaNumber(_currentLevel), // Convert to Bangla number
+              Icons.military_tech,
+              Colors.indigo,
+            ),
+          ],
+        ),
+      ],
+    ),
+  ),
+);
 
   }
 
@@ -1408,9 +1462,9 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Health Dashboard'),
+        title: const Text('স্বাস্থ্য ড্যাশবোর্ড'),
         centerTitle: true,
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
       body: Stack(
@@ -1453,7 +1507,7 @@ class _HomePageState extends State<HomePage> {
               right: 0,
               child: Container(
                 padding: const EdgeInsets.all(16),
-                color: Colors.green.withOpacity(0.7),
+                color: const Color.fromARGB(255, 76, 139, 175).withOpacity(0.7),
                 child: Column(
                   children: [
                     const Text(
@@ -1485,7 +1539,7 @@ class _HomePageState extends State<HomePage> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.deepPurple.withOpacity(0.8),
+                    color: const Color.fromARGB(255, 41, 8, 189).withOpacity(0.8),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(

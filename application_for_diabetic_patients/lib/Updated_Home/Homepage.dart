@@ -436,7 +436,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _startListening() async {
-    await _speechService.startListening(_onSpeechResult, localeId: 'en_US'); // Change locale as needed
+    await _speechService.startListening(_onSpeechResult, lang: 'en'); // Change locale as needed
     setState(() {
       _confidenceLevel = 0;
       _geminiResponse = "";

@@ -173,15 +173,7 @@ class _JournalBanglaScreenState extends State<JournalBanglaScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text(
-                  'ব্যবহারকারী: $_username',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-            ),
+            
             TextField(
               controller: _contentController,
               maxLines: 5,
@@ -193,7 +185,11 @@ class _JournalBanglaScreenState extends State<JournalBanglaScreen> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveJournalEntry,
-              child: const Text('সংরক্ষণ করুন'),
+              child: const Text('সংরক্ষণ করুন',
+               style: TextStyle(
+      fontSize: 16,
+      color: Colors.blue,  )
+      ),
             ),
             const SizedBox(height: 30),
             const Text(

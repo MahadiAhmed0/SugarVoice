@@ -188,7 +188,12 @@ class _GlucoseEntryBanglaScreenState extends State<GlucoseEntryBanglaScreen> {
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _saveGlucoseEntry,
-                    child: const Text('সংরক্ষণ করুন'),
+                    child: const Text( 'সংরক্ষণ করুন',
+    style: TextStyle(
+      fontSize: 16,
+      color: Colors.blue,  )// Set text color to blue
+                    
+                    ),
                   ),
                 ],
               ),
@@ -212,24 +217,34 @@ class _GlucoseEntryBanglaScreenState extends State<GlucoseEntryBanglaScreen> {
                             child: Row(
                               children: [
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'ব্যবহারকারী: ${entry.username}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                      Text(
-                                        'গ্লুকোজ: ${entry.glucoseValue} mg/dL',
-                                        style: const TextStyle(fontSize: 20),
-                                      ),
-                                      Text(
-                                        'সময়: ${entry.formattedTimestamp}',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Display glucose value with conditional color
+      Text(
+        'গ্লুকোজ: ${_convertToBanglaNumber(entry.glucoseValue.toString())} মিলিগ্রাম/ডেসিলিটার',
+        style: TextStyle(
+          fontSize: 20,
+          color: _getGlucoseColor(double.tryParse(entry.glucoseValue) ?? 0.0),
+        ),
+      ),
+      
+      // Display timestamp in Bangla
+      Text(
+        'সময়: ${_convertToBanglaTimestamp(entry.formattedTimestamp)}',
+        style: const TextStyle(fontSize: 12),
+      ),
+      
+      // "সংরক্ষণ" button
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+       
+          
+        ),
+    ],
+  ),
+)
+,
                                 IconButton(
                                   icon: const Icon(Icons.delete, color: Colors.red),
                                   onPressed: () => _deleteGlucoseEntry(entry.id),
@@ -246,4 +261,36 @@ class _GlucoseEntryBanglaScreenState extends State<GlucoseEntryBanglaScreen> {
       ),
     );
   }
+  String _convertToBanglaNumber(String number) {
+  Map<String, String> numberMap = {
+    '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪', '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯'
+  };
+  return number.split('').map((e) => numberMap[e] ?? e).join('');
+}
+
+// Function to convert timestamp to Bangla format
+String _convertToBanglaTimestamp(String timestamp) {
+  List<String> parts = timestamp.split(' ');
+  String date = parts[0];
+  String time = parts[1];
+  List<String> dateParts = date.split('-');
+  Map<String, String> monthMap = {
+    '01': 'জানুয়ারি', '02': 'ফেব্রুয়ারি', '03': 'মার্চ', '04': 'এপ্রিল',
+    '05': 'মে', '06': 'জুন', '07': 'জুলাই', '08': 'আগস্ট', '09': 'সেপ্টেম্বর',
+    '10': 'অক্টোবর', '11': 'নভেম্বর', '12': 'ডিসেম্বর'
+  };
+  String monthInBangla = monthMap[dateParts[1]] ?? dateParts[1];
+  return '${dateParts[2]} $monthInBangla, ${dateParts[0]} সময় $time';
+}
+
+// Function to get the color based on glucose level
+Color _getGlucoseColor(double glucoseValue) {
+  if (glucoseValue > 180) {
+    return Colors.red; // High glucose
+  } else if (glucoseValue >= 70 && glucoseValue <= 180) {
+    return Colors.green; // Normal glucose
+  } else {
+    return Colors.yellow; // Low glucose
+  }
+}
 }

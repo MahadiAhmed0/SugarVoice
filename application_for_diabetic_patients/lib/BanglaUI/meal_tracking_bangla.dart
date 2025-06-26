@@ -177,15 +177,7 @@ class _MealTrackerBanglaHomePageState extends State<MealTrackerBanglaHomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Text(
-                  'ব্যবহারকারী: $_username',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-            ),
+            
             DropdownButton<String>(
               value: _selectedMealType,
               items: _mealTypes.map((String value) {
@@ -211,7 +203,11 @@ class _MealTrackerBanglaHomePageState extends State<MealTrackerBanglaHomePage> {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveMealEntry,
-              child: const Text('খাবার যোগ করুন'),
+              child: const Text('খাবার যোগ করুন',
+               style: TextStyle(
+      fontSize: 16,
+      color: Colors.blue,  )
+              ),
             ),
             const SizedBox(height: 30),
             const Text(

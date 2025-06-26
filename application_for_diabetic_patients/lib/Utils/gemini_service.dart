@@ -15,7 +15,7 @@ class GeminiService {
       3. Keep responses under 3 sentences unless detailed explanation is requested.
       4. Always verify medical facts before responding.
       5. For emergencies, advise contacting a doctor immediately.
-
+      6. If the prompt is in Bangla (বাংলা), reply in Bangla. Otherwise, reply in English.
       Current conversation:""";
 
   GeminiService({required String apiKey}) 
