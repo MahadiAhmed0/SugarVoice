@@ -1,63 +1,95 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
-
-class EmergencyPage extends StatefulWidget {
-  const EmergencyPage({Key? key}) : super(key: key);
+import 'package:shared_preferences/shared_preferences.dart';
+class BanglaEmergencyPage extends StatefulWidget {
+  const BanglaEmergencyPage({Key? key}) : super(key: key);
 
   @override
-  State<EmergencyPage> createState() => _EmergencyPageState();
+  State<BanglaEmergencyPage> createState() => _EmergencyPageState();
 }
 
-class _EmergencyPageState extends State<EmergencyPage> {
+class _EmergencyPageState extends State<BanglaEmergencyPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final List<Map<String, String>> _contacts = [];
-
-  void _addContact() {
-    final name = _nameController.text;
-    final phone = _phoneController.text;
-    if (name.isNotEmpty && phone.isNotEmpty) {
+  List<Map<String, String>> _contacts = [];
+@override
+void initState() {
+  super.initState();
+  _loadContacts();
+}
+Future<void> _loadContacts() async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? contactsJsonString = prefs.getString('emergencyContacts');
+  
+  if (contactsJsonString != null && contactsJsonString.isNotEmpty) {
+    try {
+      final List<dynamic> jsonList = jsonDecode(contactsJsonString);
       setState(() {
-        _contacts.add({'name': name, 'phone': phone});
-        _nameController.clear();
-        _phoneController.clear();
+        _contacts = jsonList.map((json) => 
+          Map<String, String>.from(json as Map)).toList();
       });
+    } catch (e) {
+      print('Error loading contacts: $e');
     }
   }
+}
+ void _addContact() async {
+  final name = _nameController.text;
+  final phone = _phoneController.text;
+  if (name.isNotEmpty && phone.isNotEmpty) {
+    setState(() {
+      _contacts.add({'name': name, 'phone': phone});
+      _nameController.clear();
+      _phoneController.clear();
+    });
+    
+    // Save to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('emergencyContacts', jsonEncode(_contacts));
+  }
+}
+  
 
   Future<bool?> _deleteContact(int index) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Contact'),
-        content: Text('Are you sure you want to delete ${_contacts[index]['name']}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('যোগাযোগ মুছবেন?'),
+      content: Text('আপনি কি নিশ্চিত যে আপনি ${_contacts[index]['name']} কে মুছে ফেলতে চান?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('বাতিল'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('মুছুন', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
 
-    if (confirmed == true) {
-      setState(() {
-        _contacts.removeAt(index);
-      });
-      return true;
-    }
-    return false;
+  if (confirmed == true) {
+    setState(() {
+      _contacts.removeAt(index);
+    });
+    
+    // Update SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('emergencyContacts', jsonEncode(_contacts));
+    
+    return true;
   }
+  return false;
+}
 
   Future<void> _callContact(String phoneNumber) async {
     bool? res = await FlutterPhoneDirectCaller.callNumber(phoneNumber);
     if (res != true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not place call')),
+        const SnackBar(content: Text('কল করা যায়নি')),
       );
     }
   }
@@ -73,9 +105,9 @@ class _EmergencyPageState extends State<EmergencyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Emergency Contacts'),
+        title: const Text('জরুরি যোগাযোগ'),
         centerTitle: true,
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Colors.blue,
         elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -85,11 +117,11 @@ class _EmergencyPageState extends State<EmergencyPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Input fields
+            // ইনপুট ফিল্ড
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Name',
+                labelText: 'নাম',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -97,7 +129,7 @@ class _EmergencyPageState extends State<EmergencyPage> {
             TextField(
               controller: _phoneController,
               decoration: const InputDecoration(
-                labelText: 'Phone Number',
+                labelText: 'ফোন নম্বর',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.phone,
@@ -106,27 +138,29 @@ class _EmergencyPageState extends State<EmergencyPage> {
             ElevatedButton(
               onPressed: _addContact,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
+                backgroundColor: Colors.blue,
                 minimumSize: const Size(double.infinity, 50),
               ),
-              child: const Text('Add Contact', 
-                  style: TextStyle(fontSize: 16, color: Colors.white)),
+              child: const Text(
+                'যোগাযোগ যুক্ত করুন',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
             ),
             const SizedBox(height: 20),
             const Divider(thickness: 1.5),
             const SizedBox(height: 10),
             const Text(
-              'Your Emergency Contacts',
+              'আপনার জরুরি যোগাযোগসমূহ',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            
-            // Contacts list with call and delete options
+
+            // যোগাযোগ তালিকা
             Expanded(
               child: _contacts.isEmpty
                   ? const Center(
                       child: Text(
-                        'No contacts added yet',
+                        'এখনো কোনো যোগাযোগ যুক্ত করা হয়নি',
                         style: TextStyle(color: Colors.grey, fontSize: 16),
                       ),
                     )
@@ -157,8 +191,8 @@ class _EmergencyPageState extends State<EmergencyPage> {
                               ),
                               subtitle: Text(_contacts[index]['phone']!),
                               trailing: IconButton(
-                                icon: const Icon(Icons.call, color: Colors.red),
-                                onPressed: () => _callContact(_contacts[index]['phone']!) ,
+                                icon: const Icon(Icons.call, color: Colors.blue),
+                                onPressed: () => _callContact(_contacts[index]['phone']!),
                               ),
                             ),
                           ),

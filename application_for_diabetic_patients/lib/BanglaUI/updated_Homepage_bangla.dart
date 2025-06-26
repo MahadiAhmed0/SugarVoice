@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:application_for_diabetic_patients/Constansts.dart';
-import 'package:application_for_diabetic_patients/Updated_Home/EmergencyPage.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
+import 'updated_EmergencyPage_bangla.dart';
 import 'package:application_for_diabetic_patients/Utils/gemini_service.dart';
 import 'package:application_for_diabetic_patients/Utils/speech_service.dart';
 import 'package:flutter/material.dart';
@@ -355,6 +356,64 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  void _handleCallCommand(String recognizedWords) async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? contactsJsonString = prefs.getString('emergencyContacts');
+  
+  if (contactsJsonString == null || contactsJsonString.isEmpty) {
+    setState(() {
+      _geminiResponse = "কোনো জরুরি যোগাযোগ নেই। দয়া করে যোগাযোগ যুক্ত করুন।";
+    });
+    await _speak(_geminiResponse);
+    return;
+  }
+
+  try {
+    final List<dynamic> jsonList = jsonDecode(contactsJsonString);
+    List<Map<String, String>> contacts = jsonList.map((json) => 
+      Map<String, String>.from(json as Map)).toList();
+
+    // Search for the contact name in the recognized words
+    String? contactName;
+    String? phoneNumber;
+    
+    for (var contact in contacts) {
+      if (recognizedWords.contains(contact['name']!)) {
+        contactName = contact['name'];
+        phoneNumber = contact['phone'];
+        break;
+      }
+    }
+
+    if (phoneNumber == null) {
+      setState(() {
+        _geminiResponse = "আমি যোগাযোগের নাম শুনতে পাইনি। দয়া করে কিছু বলুন যেমন 'কল করো রহিম কে'";
+      });
+      await _speak(_geminiResponse);
+      return;
+    }
+
+    setState(() {
+      _geminiResponse = "$contactName কে কল করা হচ্ছে...";
+    });
+    await _speak(_geminiResponse);
+    
+    // Make the call
+    bool? res = await FlutterPhoneDirectCaller.callNumber(phoneNumber);
+    if (res != true) {
+      setState(() {
+        _geminiResponse = "$contactName কে কল করা যায়নি";
+      });
+      await _speak(_geminiResponse);
+    }
+  } catch (e) {
+    setState(() {
+      _geminiResponse = "যোগাযোগ ডেটা লোড করতে সমস্যা হয়েছে";
+    });
+    await _speak(_geminiResponse);
+  }
+}
+
   GeminiService _geminiService = GeminiService(apiKey: Gemini_API_KEY);
   String _geminiResponse = "";
   Timer? _speechClearTimer;
@@ -482,24 +541,33 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
-    final recognizedWords = result.recognizedWords.toLowerCase();
+  final recognizedWords = result.recognizedWords.toLowerCase();
+  setState(() {
+    _wordsSpoken = recognizedWords;
+    _confidenceLevel = _speechService.getConfidenceLevel(result);
+  });
+
+  // Check for wake word if we're not already in Medico mode
+  if (!_isListeningForMedico &&
+      (recognizedWords.contains('medico') ||
+          recognizedWords.contains('medical') ||
+          recognizedWords.contains('mediko') || 
+          recognizedWords.contains('মেডিকো'))) {
     setState(() {
-      _wordsSpoken = recognizedWords;
-      _confidenceLevel = _speechService.getConfidenceLevel(result);
+      _isListeningForMedico = true;
+      _geminiResponse = "আমি আপনার স্বাস্থ্য প্রশ্ন শোনার অপেক্ষা করছি...";
     });
+    return;
+  }
 
-    // Check for wake word if we're not already in Medico mode
-    if (!_isListeningForMedico &&
-        (recognizedWords.contains('medico') ||
-            recognizedWords.contains('medical') ||
-            recognizedWords.contains('mediko') || recognizedWords.contains('মেডিকো') )) {
-      setState(() {
-        _isListeningForMedico = true;
-        _geminiResponse = "আমি আপনার স্বাস্থ্য প্রশ্ন শোনার অপেক্ষা করছি...";
-      });
-      return;
-    }
-
+  // Check for call command
+  if ((recognizedWords.contains('কল') || 
+       recognizedWords.contains('ফোন') ||
+       recognizedWords.contains('call')) && 
+      _confidenceLevel > 0.7) {
+    _handleCallCommand(recognizedWords);
+    return;
+  }
     // If we're in Medico mode, process the query when speech stops
     if (_isListeningForMedico && !_speechService.speechToText.isListening) {
       _handleGeminiQuery(recognizedWords);
@@ -518,6 +586,7 @@ class _HomePageState extends State<HomePage> {
       } else if (recognizedWords.contains('খাবার') || recognizedWords.contains('খেয়েছি') || recognizedWords.contains('খাদ্য')) {
         _handleMealCommand(recognizedWords);
       }
+    
     }
 
     // Reset the clear timer
@@ -951,7 +1020,7 @@ for (int i = 0; i < _weeklyMissions.length; i++) {
         pageToPush = const MedicineTrackerApp();
         break;
       case 6:
-        pageToPush = const EmergencyPage();
+        pageToPush = const BanglaEmergencyPage();
         break;
       default:
         pageToPush = _buildDashboardView(); // Fallback to home

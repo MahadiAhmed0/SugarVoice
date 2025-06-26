@@ -59,6 +59,7 @@ class MedicineTrackerApp extends StatelessWidget {
   }
 }
 
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -98,6 +99,12 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.vertical(
             bottom: Radius.circular(20),
           ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context); // Navigate back to previous screen
+          },
         ),
       ),
       body: _pages[_selectedIndex],
