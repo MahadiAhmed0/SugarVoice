@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     
     <application
-        android:label="application_for_diabetic_patients"
+        android:label="Gluco Care"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -20,7 +20,12 @@ dependencies:
   speech_to_text: ^7.0.0
   flutter_phone_direct_caller: ^2.2.1
   http: ^0.13.6
-  
+  flutter_launcher_icons: "^0.14.4"
+
+flutter_icons:
+  android: true
+  image_path: "assets/logo.png"
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
