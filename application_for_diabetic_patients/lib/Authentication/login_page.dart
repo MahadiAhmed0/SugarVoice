@@ -25,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF4E1B79);
+    const primaryColor = Colors.blue;
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
@@ -114,7 +114,7 @@ class _LoginPageState extends State<LoginPage> {
                   "Don't have an account? Register",
                   style: TextStyle(
                     color: primaryColor,
-                    decoration: TextDecoration.underline,
+                    
                     fontSize: 14,
                   ),
                 ),
